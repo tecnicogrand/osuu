@@ -3,202 +3,238 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>osu! Web - Advanced Neon Edition</title>
+    <title>osu! Web - Authentic Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;0,900;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Varela+Round&family=Torus&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --ui-font: 'Varela Round', sans-serif;
+            --score-font: 'Torus', 'Varela Round', sans-serif;
+        }
+
         body {
             margin: 0; padding: 0; overflow: hidden;
-            background-color: #020205; font-family: 'Montserrat', sans-serif;
+            background-color: #111; font-family: var(--ui-font);
             user-select: none; -webkit-user-select: none; color: white;
-            cursor: none; /* Ocultamos el cursor del sistema para dibujar el nuestro */
+            cursor: none; /* Hide default cursor for custom gameplay cursor */
         }
+
         #gameCanvas {
             display: block; width: 100vw; height: 100vh;
             position: absolute; top: 0; left: 0; z-index: 10;
         }
+
         #ytPlayerContainer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            opacity: 0.15; z-index: 1; pointer-events: none; filter: blur(10px) saturate(200%);
+            opacity: 0.3; z-index: 1; pointer-events: none;
+            transition: opacity 1s ease;
         }
-        
+
+        .dimmed { opacity: 0.1 !important; }
+
         /* UI Layers */
         .ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 20; display: flex; flex-direction: column;
             justify-content: center; align-items: center;
-            pointer-events: none; transition: opacity 0.4s ease, transform 0.4s ease;
+            pointer-events: none; transition: opacity 0.3s ease;
         }
+
         .glass-panel {
-            pointer-events: auto; background: rgba(10, 10, 25, 0.7);
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(0, 255, 255, 0.15); border-radius: 24px;
-            padding: 2.5rem; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(0,255,255,0.05);
-            text-align: center; width: 90%; max-width: 600px;
-            max-height: 90vh; overflow-y: auto;
+            pointer-events: auto; background: rgba(20, 20, 30, 0.85);
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px;
+            padding: 2.5rem; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            text-align: center; width: 90%; max-width: 650px;
         }
-        
-        /* Custom Scrollbar for Leaderboard */
-        .glass-panel::-webkit-scrollbar { width: 8px; }
-        .glass-panel::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
-        .glass-panel::-webkit-scrollbar-thumb { background: #00ffff; border-radius: 4px; }
 
-        /* Typography */
-        .title-neon {
-            font-size: 4.5rem; font-weight: 900; font-style: italic;
-            background: linear-gradient(to right, #ff00ff, #00ffff);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 30px rgba(255,0,255,0.4); margin-bottom: 0.5rem; line-height: 1.1;
-        }
-        
+        /* Buttons and Inputs */
         .input-text {
-            width: 100%; padding: 12px 20px; border-radius: 12px;
-            background: rgba(0,0,0,0.6); border: 2px solid #333;
+            width: 100%; padding: 12px 20px; border-radius: 8px;
+            background: rgba(0,0,0,0.5); border: 2px solid #444;
             color: #fff; font-size: 1rem; margin-bottom: 1.5rem;
-            transition: all 0.3s;
+            transition: all 0.2s; font-family: var(--ui-font);
         }
-        .input-text:focus { outline: none; border-color: #00ffff; box-shadow: 0 0 15px rgba(0,255,255,0.3); }
+        .input-text:focus { outline: none; border-color: #ff66aa; box-shadow: 0 0 10px rgba(255,102,170,0.3); }
         
-        .btn-neon {
-            background: linear-gradient(45deg, #ff00a0, #00d2ff); border: none;
-            color: white; padding: 15px 40px; font-size: 1.2rem; font-weight: bold;
-            border-radius: 50px; cursor: pointer; box-shadow: 0 0 20px rgba(255, 0, 255, 0.4);
-            transition: all 0.2s; text-transform: uppercase; letter-spacing: 2px; width: 100%;
+        .btn-osu {
+            background: #ff66aa; border: none; color: white;
+            padding: 15px 40px; font-size: 1.2rem; font-weight: bold;
+            border-radius: 30px; cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 102, 170, 0.4);
+            transition: all 0.1s; text-transform: uppercase; letter-spacing: 1px;
+            font-family: var(--ui-font); text-shadow: 0 1px 2px rgba(0,0,0,0.5);
         }
-        .btn-neon:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 8px 30px rgba(0, 210, 255, 0.6); }
-        .btn-neon:active { transform: translateY(1px); }
-        .btn-neon:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        .btn-outline {
-            background: transparent; border: 2px solid #00ffff; color: #00ffff;
-            box-shadow: 0 0 10px rgba(0,255,255,0.2);
-        }
-        
-        .selector-group { display: flex; gap: 10px; margin-bottom: 1.5rem; }
-        .selector-btn {
-            flex: 1; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.05);
-            border: 1px solid transparent; color: #aaa; cursor: pointer; transition: 0.2s; font-weight: 600;
-        }
-        .selector-btn.active { background: rgba(0, 255, 255, 0.15); border-color: #00ffff; color: #fff; text-shadow: 0 0 8px #00ffff; box-shadow: inset 0 0 10px rgba(0,255,255,0.2); }
-        .hidden { display: none !important; opacity: 0; pointer-events: none; }
-        
-        .hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
-        .top-bar { position: absolute; top: 0; left: 0; width: 100%; height: 6px; background: rgba(255,255,255,0.1); }
-        .progress-fill { height: 100%; width: 0%; background: #00ffff; box-shadow: 0 0 15px #00ffff; transition: width 0.1s linear; }
-        .health-bar-bg { position: absolute; top: 15px; left: 50%; transform: translateX(-50%); width: 500px; max-width: 80%; height: 18px; background: rgba(0,0,0,0.6); border-radius: 10px; border: 2px solid #333; overflow: hidden; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
-        .health-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #ff0055, #00ffaa); transition: width 0.15s ease-out; }
-        
-        .hud-stats { position: absolute; top: 35px; right: 35px; text-align: right; }
-        .hud-score { font-size: 4rem; font-weight: 900; line-height: 1; text-shadow: 0 0 20px #00ffff; }
-        .hud-acc { font-size: 2rem; font-weight: 700; color: #ccc; }
-        .hud-combo { position: absolute; bottom: 40px; left: 40px; font-size: 6rem; font-weight: 900; text-shadow: 0 0 30px #ff00ff; transition: transform 0.05s ease-out; }
-        .combo-bump { transform: scale(1.2); }
-        
-        /* Grades */
-        .grade-SS { color: #ffd700; text-shadow: 0 0 20px #ffd700, 0 0 40px #ffaa00; }
-        .grade-S { color: #00ffff; text-shadow: 0 0 20px #00ffff; }
-        .grade-A { color: #00ff00; text-shadow: 0 0 20px #00ff00; }
-        .grade-B { color: #0088ff; text-shadow: 0 0 20px #0088ff; }
-        .grade-C { color: #ffaa00; text-shadow: 0 0 20px #ffaa00; }
-        .grade-D { color: #ff0055; text-shadow: 0 0 20px #ff0055; }
+        .btn-osu:hover { background: #ff88bb; transform: scale(1.05); }
+        .btn-osu:active { transform: scale(0.95); }
+        .btn-outline { background: transparent; border: 2px solid #ff66aa; color: #ff66aa; box-shadow: none; }
+        .btn-outline:hover { background: rgba(255,102,170,0.1); }
 
-        .leaderboard-entry { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); align-items: center; }
-        .leaderboard-entry:last-child { border-bottom: none; }
-        .rank-number { font-weight: 900; color: #00ffff; width: 30px; }
+        .hidden { display: none !important; opacity: 0; pointer-events: none; }
+
+        /* HUD - Classic osu! Layout */
+        .hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 15; }
+        
+        /* Progress Bar (Bottom) */
+        .progress-bar-bg { position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; background: rgba(0,0,0,0.5); }
+        .progress-fill { height: 100%; width: 0%; background: #ff66aa; box-shadow: 0 0 10px #ff66aa; }
+
+        /* Health Bar (Top Left) */
+        .hud-health-container {
+            position: absolute; top: 15px; left: 15px; width: 400px; max-width: 40vw; height: 24px;
+            background: rgba(0,0,0,0.6); border-radius: 12px; border: 2px solid rgba(255,255,255,0.8);
+            overflow: hidden; transform: skewX(-15deg); box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .health-fill {
+            height: 100%; width: 100%; background: linear-gradient(90deg, #ff0000, #ffcc00, #00ff00);
+            transition: width 0.1s ease-out;
+        }
+
+        /* Score & Acc (Top Right) */
+        .hud-score-container { position: absolute; top: 10px; right: 20px; text-align: right; }
+        .hud-score { font-family: var(--score-font); font-size: 3.5rem; font-weight: bold; line-height: 1; letter-spacing: 2px; text-shadow: 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; }
+        .hud-acc { font-family: var(--score-font); font-size: 1.8rem; font-weight: bold; color: #ddd; text-shadow: 2px 2px 0 #000; margin-top: -5px; }
+
+        /* Combo (Bottom Left) */
+        .hud-combo {
+            position: absolute; bottom: 20px; left: 20px;
+            font-family: var(--score-font); font-size: 4.5rem; font-weight: bold;
+            text-shadow: 2px 2px 0 #000, 0 0 10px rgba(0,0,0,0.5);
+            transition: transform 0.05s ease-out; letter-spacing: -2px;
+        }
+        .combo-bump { transform: scale(1.15); color: #ff66aa; }
+
+        /* Keystroke Overlay (Right Middle) */
+        .hud-keys {
+            position: absolute; top: 50%; right: 20px; transform: translateY(-50%);
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .key-indicator {
+            width: 50px; height: 50px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.6);
+            display: flex; justify-content: center; align-items: center;
+            font-size: 1.5rem; font-weight: bold; font-family: var(--score-font);
+            background: rgba(0,0,0,0.4); transition: all 0.05s; color: rgba(255,255,255,0.6);
+        }
+        .key-indicator.active {
+            background: #ff66aa; border-color: #fff; color: #fff;
+            box-shadow: 0 0 15px #ff66aa; transform: scale(0.9);
+        }
+
+        /* Results / Grades */
+        .grade-SS { color: #silver; text-shadow: 0 0 15px #fff; }
+        .grade-S { color: #ffd700; text-shadow: 0 0 15px #ffd700; }
+        .grade-A { color: #00ff00; text-shadow: 0 0 15px #00ff00; }
+        .grade-B { color: #0088ff; text-shadow: 0 0 15px #0088ff; }
+        .grade-C { color: #ff8800; text-shadow: 0 0 15px #ff8800; }
+        .grade-D { color: #ff0000; text-shadow: 0 0 15px #ff0000; }
     </style>
 </head>
 <body>
 
+    <!-- Background YouTube Player -->
     <div id="ytPlayerContainer"><div id="ytplayer"></div></div>
+    
+    <!-- Rendering Canvas -->
     <canvas id="gameCanvas"></canvas>
 
+    <!-- Authentic HUD -->
     <div id="hud" class="hud hidden">
-        <div class="top-bar"><div id="songProgress" class="progress-fill"></div></div>
-        <div class="health-bar-bg" id="healthBarContainer"><div id="healthFill" class="health-fill"></div></div>
-        <div class="hud-stats">
-            <div id="scoreText" class="hud-score">0000000</div>
+        <div class="hud-health-container"><div id="healthFill" class="health-fill"></div></div>
+        
+        <div class="hud-score-container">
+            <div id="scoreText" class="hud-score">00000000</div>
             <div id="accuracyText" class="hud-acc">100.00%</div>
         </div>
+        
         <div id="comboText" class="hud-combo">0x</div>
+        
+        <div class="hud-keys">
+            <div id="keyK1" class="key-indicator">Z</div>
+            <div id="keyK2" class="key-indicator">X</div>
+            <div id="keyM1" class="key-indicator" style="font-size:1rem;">M1</div>
+            <div id="keyM2" class="key-indicator" style="font-size:1rem;">M2</div>
+        </div>
+        
+        <div class="progress-bar-bg"><div id="songProgress" class="progress-fill"></div></div>
     </div>
 
+    <!-- Main Menu -->
     <div id="mainMenu" class="ui-layer">
         <div class="glass-panel">
-            <h1 class="title-neon">osu! web</h1>
-            <p class="mb-6 text-gray-300 font-bold tracking-widest">ADVANCED NEON EDITION</p>
+            <h1 class="text-6xl font-bold mb-2 tracking-tighter" style="color: #ff66aa; text-shadow: 0 4px 10px rgba(255,102,170,0.4);">osu! web</h1>
+            <p class="mb-8 text-gray-300 font-bold tracking-widest text-sm">AUTHENTIC EXPERIENCE</p>
             
-            <input type="text" id="ytUrlInput" class="input-text" placeholder="URL de YouTube (ej. https://youtu.be/...)" value="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
+            <input type="text" id="ytUrlInput" class="input-text" placeholder="YouTube URL (e.g., https://youtu.be/...)" value="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
             
-            <div class="text-left mb-2 text-xs text-gray-400 font-black tracking-wider">DIFICULTAD</div>
-            <div class="selector-group" id="diffSelectors">
-                <button class="selector-btn" data-val="easy">Fácil</button>
-                <button class="selector-btn active" data-val="normal">Normal</button>
-                <button class="selector-btn" data-val="hard">Difícil</button>
-            </div>
-
-            <div class="flex gap-4 mt-6">
-                <button id="btnStart" class="btn-neon">Jugar</button>
-                <button id="btnLeaderboard" class="btn-neon btn-outline">Ranking</button>
+            <div class="flex gap-4 mt-4">
+                <button id="btnStart" class="btn-osu flex-1">Play</button>
+                <button id="btnLeaderboard" class="btn-osu btn-outline">Rankings</button>
             </div>
             
-            <div class="mt-6 text-sm text-gray-400">
-                <p>Controles: <strong>Ratón/Trackpad</strong> para apuntar.</p>
-                <p>Usa <strong>Z</strong> y <strong>X</strong> del teclado o <strong>Clic</strong> para golpear.</p>
+            <div class="mt-8 text-sm text-gray-400 bg-black bg-opacity-40 p-4 rounded-lg">
+                <p class="mb-1"><strong>How to play:</strong> Aim with cursor, click circles to the beat.</p>
+                <p>Use <strong>Z / X</strong> on keyboard or <strong>Left/Right Click</strong>.</p>
             </div>
-            <div id="loadingText" class="text-cyan-400 mt-4 font-bold hidden animate-pulse">Sincronizando con YouTube...</div>
+            <div id="loadingText" class="text-pink-400 mt-4 font-bold hidden animate-pulse">Syncing Beatmap...</div>
         </div>
     </div>
 
-    <div id="resultsScreen" class="ui-layer hidden" style="transform: scale(0.9);">
-        <div class="glass-panel w-full max-w-2xl">
-            <div class="flex justify-between items-center mb-6">
-                <h2 id="resultTitle" class="text-3xl font-black uppercase tracking-widest text-cyan-400">Resultados</h2>
-                <div id="gradeDisplay" class="text-7xl font-black grade-SS">SS</div>
+    <!-- Results Screen -->
+    <div id="resultsScreen" class="ui-layer hidden">
+        <div class="glass-panel w-full max-w-3xl">
+            <div class="flex justify-between items-start mb-6 border-b border-gray-700 pb-4">
+                <div class="text-left">
+                    <h2 id="resultTitle" class="text-3xl font-black uppercase text-pink-400 mb-1">Beatmap Cleared</h2>
+                    <p class="text-gray-400">Difficulty: Normal</p>
+                </div>
+                <div id="gradeDisplay" class="text-8xl font-black grade-SS" style="line-height: 0.8;">S</div>
             </div>
             
-            <div class="text-left bg-black bg-opacity-40 p-6 rounded-xl border border-gray-800 mb-6">
-                <div class="text-gray-400 text-sm font-bold tracking-wider mb-1">PUNTUACIÓN TOTAL</div>
-                <div class="text-5xl font-black mb-4 text-white drop-shadow-md" id="resScore">0</div>
+            <div class="flex gap-6 mb-6">
+                <div class="flex-1 text-left bg-black bg-opacity-50 p-4 rounded-xl">
+                    <div class="text-gray-400 text-sm font-bold mb-1">SCORE</div>
+                    <div class="text-5xl font-black mb-4 text-white" id="resScore">00000000</div>
+                    
+                    <div class="flex justify-between mt-4">
+                        <div>
+                            <div class="text-gray-400 text-xs font-bold">MAX COMBO</div>
+                            <div class="text-2xl font-bold" id="resMaxCombo">0x</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-gray-400 text-xs font-bold">ACCURACY</div>
+                            <div class="text-2xl font-bold" id="resAcc">100.00%</div>
+                        </div>
+                    </div>
+                </div>
                 
-                <div class="flex gap-8">
-                    <div>
-                        <div class="text-gray-400 text-xs font-bold tracking-wider">PRECISIÓN</div>
-                        <div class="text-2xl font-bold" id="resAcc">100%</div>
-                    </div>
-                    <div>
-                        <div class="text-gray-400 text-xs font-bold tracking-wider">COMBO MÁX.</div>
-                        <div class="text-2xl font-bold text-pink-400" id="resMaxCombo">0x</div>
-                    </div>
+                <div class="w-1/3 grid grid-cols-1 gap-2 text-left bg-black bg-opacity-50 p-4 rounded-xl font-bold text-xl">
+                    <div class="flex justify-between" style="color: #66ccff;"><span>300</span> <span id="res300">0</span></div>
+                    <div class="flex justify-between" style="color: #88ff44;"><span>100</span> <span id="res100">0</span></div>
+                    <div class="flex justify-between" style="color: #ffcc22;"><span>50</span> <span id="res50">0</span></div>
+                    <div class="flex justify-between" style="color: #ff4444;"><span>Miss</span> <span id="resMiss">0</span></div>
                 </div>
             </div>
-            
-            <div class="grid grid-cols-4 gap-2 mb-8 text-center text-lg font-bold bg-black bg-opacity-30 rounded-lg p-3">
-                <div style="color: #00ffff;"><span class="text-xs block text-gray-400">PERFECTO</span> <span id="res300">0</span></div>
-                <div style="color: #00ff00;"><span class="text-xs block text-gray-400">BIEN</span> <span id="res100">0</span></div>
-                <div style="color: #ffff00;"><span class="text-xs block text-gray-400">MEH</span> <span id="res50">0</span></div>
-                <div style="color: #ff0055;"><span class="text-xs block text-gray-400">FALLOS</span> <span id="resMiss">0</span></div>
-            </div>
 
-            <!-- Leaderboard Submission -->
-            <div id="submitSection" class="mb-6 p-4 border border-cyan-900 rounded-xl bg-cyan-950 bg-opacity-30 hidden">
-                <p class="text-sm text-cyan-300 mb-2 font-bold">¡Nueva Puntuación Alta! Guarda tu récord:</p>
+            <div id="submitSection" class="mb-6 p-4 border border-pink-900 rounded-xl bg-pink-900 bg-opacity-20 hidden">
+                <p class="text-sm text-pink-300 mb-3 font-bold">New High Score! Save to Leaderboard:</p>
                 <div class="flex gap-2">
-                    <input type="text" id="playerName" class="input-text m-0 flex-grow" placeholder="Ingresa tu nombre..." maxlength="15">
-                    <button id="btnSaveScore" class="btn-neon w-auto px-6 py-2">Guardar</button>
+                    <input type="text" id="playerName" class="input-text m-0 flex-grow" placeholder="Your Name" maxlength="15">
+                    <button id="btnSaveScore" class="btn-osu w-auto px-6 py-2" style="border-radius: 8px;">Submit</button>
                 </div>
             </div>
 
-            <button id="btnRestart" class="btn-neon btn-outline">Volver al Menú</button>
+            <button id="btnRestart" class="btn-osu btn-outline w-full">Back to Menu</button>
         </div>
     </div>
 
+    <!-- Leaderboard -->
     <div id="leaderboardScreen" class="ui-layer hidden">
-        <div class="glass-panel">
-            <h2 class="text-3xl font-black uppercase tracking-widest text-cyan-400 mb-6">Top Global</h2>
-            <div id="leaderboardList" class="text-left min-h-[300px] max-h-[50vh] overflow-y-auto mb-6">
-                <!-- Entries injected via JS -->
-                <div class="text-center text-gray-400 py-10 animate-pulse">Cargando datos del servidor...</div>
+        <div class="glass-panel max-w-2xl">
+            <h2 class="text-3xl font-black uppercase text-pink-400 mb-6 border-b border-gray-700 pb-2">Global Ranking</h2>
+            <div id="leaderboardList" class="text-left min-h-[300px] max-h-[50vh] overflow-y-auto mb-6 pr-2" style="scrollbar-width: thin;">
+                <div class="text-center text-gray-400 py-10 animate-pulse">Loading scores...</div>
             </div>
-            <button id="btnCloseLeaderboard" class="btn-neon">Cerrar</button>
+            <button id="btnCloseLeaderboard" class="btn-osu w-full">Close</button>
         </div>
     </div>
 
@@ -207,8 +243,8 @@
         import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, getDocs, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase Initialization with Guardrails
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'osu-web-advanced';
+        // Firebase Guardrails
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'osu-web-authentic';
         let db, auth, user, isFirebaseReady = false;
 
         async function initFirebase() {
@@ -225,43 +261,47 @@
                     }
                     user = auth.currentUser;
                     isFirebaseReady = !!user;
-                    console.log("Firebase conectado correctamente.");
                 }
-            } catch (error) {
-                console.warn("Firebase no disponible en este entorno. Se desactivarán las funciones online.", error);
+            } catch (e) {
+                console.warn("Firebase offline.", e);
             }
         }
         initFirebase();
 
         // Canvas Setup
         const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d', { alpha: false }); // Optimizacion
+        const ctx = canvas.getContext('2d', { alpha: false });
         let width, height;
 
-        // Game Settings
-        let difficulty = 'normal';
+        // Authentic Game Settings
+        // OD determines hit windows. CS determines radius. AR determines approach time.
         const settings = {
-            easy:   { approachRate: 1800, circleRadius: 65, drainRate: 2, hitWindows: { 300: 80, 100: 140, 50: 200, miss: 250 } },
-            normal: { approachRate: 1200, circleRadius: 50, drainRate: 4, hitWindows: { 300: 60, 100: 110, 50: 160, miss: 200 } },
-            hard:   { approachRate: 800,  circleRadius: 35, drainRate: 7, hitWindows: { 300: 40, 100: 80,  50: 120, miss: 150 } }
+            approachRateTime: 1200, // ms
+            circleRadius: 60, // hitbox radius
+            hitWindows: { 300: 60, 100: 120, 50: 180, miss: 250 },
+            healthDrain: 3.5 // per second
         };
 
-        // Game State Variables
-        let gameState = 'menu'; // menu, loading, playing, results
+        // Standard osu! combo colors
+        const comboColors = [
+            '#00AAFF', // Blue
+            '#FF00AA', // Pink
+            '#00FF22', // Green
+            '#FFAA00'  // Orange
+        ];
+
+        // State Variables
+        let gameState = 'menu';
         let score = 0, combo = 0, maxCombo = 0, health = 100;
         let hits = { 300: 0, 100: 0, 50: 0, miss: 0 };
-        let hitCircles = [], particles = [], scorePopups = [];
+        let hitCircles = [], scorePopups = [], hitParticles = [];
         let mapData = [], currentMapIndex = 0;
-        
-        // Input State
-        let mouseX = 0, mouseY = 0;
-        let cursorTrail = [];
-        let keysPressed = { z: false, x: false };
-        
-        // Effects State
-        let shakeTime = 0;
+        let mouseX = width/2, mouseY = height/2;
         let lastFrameTime = 0;
-        const neonPalette = ['#00ffff', '#ff00ff', '#00ff00', '#ffff00', '#ff0055'];
+        let player, ytDuration = 0, currentVideoId = "";
+
+        // Input State Tracking
+        const inputState = { z: false, x: false, m1: false, m2: false };
 
         function resize() {
             width = window.innerWidth; height = window.innerHeight;
@@ -270,52 +310,6 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // Generador de mapas dinámico y determinista basado en el ID del video
-        function hashString(str) {
-            let hash = 0;
-            for (let i = 0; i < str.length; i++) {
-                let char = str.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash & hash;
-            }
-            return Math.abs(hash);
-        }
-
-        function generateBeatmap(duration, vidId) {
-            let map = [];
-            let seed = hashString(vidId);
-            
-            // RNG Determinista simple
-            function random() {
-                seed = (seed * 9301 + 49297) % 233280;
-                return seed / 233280;
-            }
-
-            let interval = difficulty === 'hard' ? 350 : (difficulty === 'normal' ? 500 : 700);
-            let pad = settings[difficulty].circleRadius * 2;
-            
-            let colorIdx = 0;
-            // Empezamos a los 2 segundos, terminamos 2 seg antes del fin
-            for (let t = 2000; t < duration * 1000 - 2000; t += interval) {
-                // Añadimos sutil variación de ritmo para que no sea monótono
-                let timeVariance = t + (random() * 100 - 50); 
-                let x = pad + random() * (width - pad * 2);
-                let y = pad + random() * (height - pad * 2);
-                
-                map.push({
-                    time: timeVariance,
-                    x: x, y: y,
-                    color: neonPalette[colorIdx % neonPalette.length]
-                });
-                colorIdx++;
-                
-                // Probabilidad de pausas o dobles notas
-                if(random() > 0.85) t += interval; // Pausa
-            }
-            return map.sort((a,b) => a.time - b.time);
-        }
-
-        // Utilidades de formato y matemáticas
         function formatScore(num) { return num.toString().padStart(8, '0'); }
         function getAccuracy() {
             let total = hits[300] + hits[100] + hits[50] + hits.miss;
@@ -332,104 +326,141 @@
             return 'D';
         }
 
-        function triggerScreenShake(intensity = 15) { shakeTime = intensity; }
+        function generateBeatmap(duration, vidId) {
+            let map = [];
+            // Simple deterministic RNG based on video ID length & char codes
+            let seed = vidId.charCodeAt(0) + vidId.charCodeAt(vidId.length-1) || 42;
+            function random() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+
+            let timeInterval = 500; // Average gap
+            let pad = settings.circleRadius * 1.5;
+            
+            let colorIdx = 0;
+            let comboNumber = 1;
+
+            for (let t = 2000; t < duration * 1000 - 3000; t += timeInterval) {
+                let x = pad + random() * (width - pad * 2);
+                let y = pad + random() * (height - pad * 2);
+                
+                // Group combos every ~6 notes
+                if (comboNumber > 6 || random() > 0.85) {
+                    comboNumber = 1;
+                    colorIdx = (colorIdx + 1) % comboColors.length;
+                }
+
+                map.push({
+                    time: t + (random() * 80 - 40), // slight offset
+                    x: x, y: y,
+                    color: comboColors[colorIdx],
+                    number: comboNumber
+                });
+                
+                comboNumber++;
+                
+                // Varied rhythm
+                let r = random();
+                if (r > 0.8) timeInterval = 250; // fast stream
+                else if (r > 0.5) timeInterval = 500; // normal beat
+                else timeInterval = 750; // pause
+            }
+            return map.sort((a,b) => a.time - b.time);
+        }
 
         function updateHUD() {
             document.getElementById('scoreText').innerText = formatScore(score);
             document.getElementById('comboText').innerText = combo + 'x';
             document.getElementById('accuracyText').innerText = getAccuracy() + '%';
-            document.getElementById('healthFill').style.width = Math.max(0, health) + '%';
+            document.getElementById('healthFill').style.width = Math.max(0, Math.min(100, health)) + '%';
             
-            let progress = 0;
-            if (ytDuration > 0 && player && typeof player.getCurrentTime === 'function') {
-                progress = (player.getCurrentTime() / ytDuration) * 100;
-            }
+            let progress = (player && ytDuration > 0) ? (player.getCurrentTime() / ytDuration) * 100 : 0;
             document.getElementById('songProgress').style.width = progress + '%';
             
-            // Animación de combo
             let ct = document.getElementById('comboText');
             ct.classList.remove('combo-bump'); 
-            void ct.offsetWidth; // Reflow
+            void ct.offsetWidth; 
             ct.classList.add('combo-bump');
+            
+            // Update keys UI
+            document.getElementById('keyK1').classList.toggle('active', inputState.z);
+            document.getElementById('keyK2').classList.toggle('active', inputState.x);
+            document.getElementById('keyM1').classList.toggle('active', inputState.m1);
+            document.getElementById('keyM2').classList.toggle('active', inputState.m2);
         }
 
         class HitCircle {
             constructor(data) {
                 this.x = data.x; this.y = data.y;
                 this.targetTime = data.time;
-                this.spawnTime = data.time - settings[difficulty].approachRate;
+                this.spawnTime = data.time - settings.approachRateTime;
                 this.color = data.color;
+                this.number = data.number;
                 this.active = true;
-                this.radius = settings[difficulty].circleRadius;
+                this.radius = settings.circleRadius;
             }
             
             draw(ctx, currentTime) {
                 if(!this.active) return;
-                let progress = (currentTime - this.spawnTime) / (this.targetTime - this.spawnTime);
+                
+                let timeAlive = currentTime - this.spawnTime;
+                let duration = this.targetTime - this.spawnTime;
+                let progress = timeAlive / duration;
+                
                 if(progress < 0 || progress > 1.5) return; 
 
-                let alpha = Math.min(1, progress * 4); // Fade in rápido
-                let approachScale = 1 + 2 * (1 - progress); // Anillo se cierra
+                // Alpha fade in
+                let alpha = Math.min(1, progress * 3); 
                 
                 ctx.globalAlpha = alpha;
                 
-                // Sombra y brillo exterior
-                ctx.shadowBlur = 20;
-                ctx.shadowColor = this.color;
-
-                // Base del círculo
+                // 1. Draw Hit Circle (Solid Base)
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI*2);
-                ctx.fillStyle = 'rgba(15, 15, 25, 0.9)'; // Interior oscuro
+                
+                // Add slight radial gradient to make it look 3D like classic skin
+                let grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+                grad.addColorStop(0, '#ffffff'); // bright center
+                grad.addColorStop(0.2, this.color);
+                grad.addColorStop(0.9, this.color);
+                grad.addColorStop(1, 'rgba(0,0,0,0.5)'); // dark edge
+                
+                ctx.fillStyle = grad;
                 ctx.fill();
-                ctx.lineWidth = 4;
-                ctx.strokeStyle = this.color;
+
+                // Inner white border (authentic style)
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#ffffff';
                 ctx.stroke();
 
-                // Anillo de aproximación (Approach Circle)
-                if(progress <= 1.05) {
+                // Outer thin dark border
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius + 1, 0, Math.PI*2);
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = '#222';
+                ctx.stroke();
+
+                // 2. Draw Number
+                ctx.fillStyle = '#ffffff';
+                ctx.font = `bold ${this.radius * 0.8}px var(--ui-font)`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                // slight shadow for text readability
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 4;
+                ctx.fillText(this.number, this.x, this.y + (this.radius*0.05));
+                ctx.shadowBlur = 0; // reset
+
+                // 3. Draw Approach Circle
+                if(progress <= 1.0) {
+                    // Scales down from 3x to 1x
+                    let scale = 1 + 2 * (1 - progress); 
+                    
                     ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.radius * Math.max(1, approachScale), 0, Math.PI*2);
+                    ctx.arc(this.x, this.y, this.radius * scale, 0, Math.PI*2);
                     ctx.strokeStyle = this.color;
-                    ctx.lineWidth = 3;
-                    ctx.shadowBlur = 0; // Para que el anillo sea nítido
+                    ctx.lineWidth = 4;
                     ctx.stroke();
                 }
                 
-                // Punto central
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius * 0.15, 0, Math.PI*2);
-                ctx.fillStyle = '#fff';
-                ctx.fill();
-                
-                ctx.globalAlpha = 1;
-                ctx.shadowBlur = 0;
-            }
-        }
-
-        class Particle {
-            constructor(x, y, color) {
-                this.x = x; this.y = y; this.color = color;
-                let angle = Math.random() * Math.PI * 2;
-                let speed = Math.random() * 12 + 4;
-                this.vx = Math.cos(angle) * speed; 
-                this.vy = Math.sin(angle) * speed;
-                this.life = 1.0; 
-                this.decay = Math.random() * 0.03 + 0.02;
-                this.size = Math.random() * 5 + 2;
-            }
-            update() {
-                this.x += this.vx; this.y += this.vy;
-                this.vx *= 0.92; this.vy *= 0.92; // Fricción fuerte
-                this.life -= this.decay;
-            }
-            draw(ctx) {
-                if(this.life <= 0) return;
-                ctx.globalAlpha = this.life; 
-                ctx.fillStyle = this.color;
-                ctx.beginPath(); 
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); 
-                ctx.fill();
                 ctx.globalAlpha = 1;
             }
         }
@@ -437,42 +468,39 @@
         class ScorePopup {
             constructor(x, y, scoreVal) {
                 this.x = x; this.y = y; this.life = 1.0;
-                this.vy = -2;
-                if(scoreVal === 300) { this.text = '300'; this.color = '#00ffff'; }
-                else if(scoreVal === 100) { this.text = '100'; this.color = '#00ff00'; }
-                else if(scoreVal === 50) { this.text = '50'; this.color = '#ffff00'; }
-                else { this.text = 'X'; this.color = '#ff0055'; }
+                this.scoreVal = scoreVal;
+                
+                if(scoreVal === 300) { this.text = '300'; this.color = '#66ccff'; this.scale = 1.2; }
+                else if(scoreVal === 100) { this.text = '100'; this.color = '#88ff44'; this.scale = 1.0;}
+                else if(scoreVal === 50) { this.text = '50'; this.color = '#ffcc22'; this.scale = 0.8;}
+                else { this.text = 'X'; this.color = '#ff4444'; this.scale = 1.5; }
             }
             update() { 
-                this.y += this.vy; 
-                this.vy *= 0.9;
-                this.life -= 0.03; 
+                this.life -= 0.02; // slower fade
+                if(this.scoreVal === 0) this.y += 1; // Miss drops down
             }
             draw(ctx) {
                 if(this.life <= 0) return;
-                ctx.globalAlpha = this.life;
+                
+                let currentScale = this.scale * (1 + (1 - this.life) * 0.2); // slight expand
+                
+                ctx.globalAlpha = Math.max(0, this.life);
                 ctx.fillStyle = this.color; 
-                ctx.font = '900 36px Montserrat';
+                ctx.font = `bold ${40 * currentScale}px var(--score-font)`;
                 ctx.textAlign = 'center'; 
                 ctx.textBaseline = 'middle';
-                ctx.shadowBlur = 15; 
-                ctx.shadowColor = this.color;
                 
-                // Efecto "pop" al inicio y desvanece
-                let scale = 1 + (1 - this.life) * 0.5;
-                ctx.save(); 
-                ctx.translate(this.x, this.y); 
-                ctx.scale(scale, scale);
-                ctx.fillText(this.text, 0, 0); 
-                ctx.restore();
+                // Classic osu hit shadow
+                ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                ctx.shadowBlur = 5;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 2;
                 
+                ctx.fillText(this.text, this.x, this.y); 
+                
+                ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0; // reset
                 ctx.globalAlpha = 1; 
-                ctx.shadowBlur = 0;
             }
-        }
-
-        function spawnExplosion(x, y, color) {
-            for(let i=0; i<25; i++) particles.push(new Particle(x, y, color));
         }
 
         function processHit(circle, scoreVal) {
@@ -480,15 +508,17 @@
             hits[scoreVal === 0 ? 'miss' : scoreVal]++;
             
             if(scoreVal > 0) {
-                score += scoreVal + (scoreVal * combo * 0.1);
+                score += scoreVal + (scoreVal * combo * 0.1); // classic combo multiplier
                 combo++;
                 if(combo > maxCombo) maxCombo = combo;
-                health = Math.min(100, health + (scoreVal === 300 ? 5 : (scoreVal===100 ? 2 : 0)));
-                spawnExplosion(circle.x, circle.y, circle.color);
+                // Healing: 300 heals lots, 100 a bit, 50 very little
+                health = Math.min(100, health + (scoreVal === 300 ? 4 : (scoreVal===100 ? 1 : 0.2)));
+                
+                // Add click ripple effect
+                hitParticles.push({x: circle.x, y: circle.y, radius: circle.radius, life: 1, color: circle.color});
             } else {
                 combo = 0;
-                health -= settings[difficulty].drainRate * 3;
-                triggerScreenShake();
+                health -= settings.healthDrain * 5; // massive drain on miss
             }
             
             scorePopups.push(new ScorePopup(circle.x, circle.y, scoreVal));
@@ -497,108 +527,88 @@
             if(health <= 0) endGame(false);
         }
 
-        function attemptHit() {
-            if(gameState !== 'playing' || !player || typeof player.getCurrentTime !== 'function') return;
+        function triggerAction() {
+            if(gameState !== 'playing' || !player) return;
             
             let currentTime = player.getCurrentTime() * 1000;
-            let hw = settings[difficulty].hitWindows;
+            let hw = settings.hitWindows;
             
-            // Buscar círculo más antiguo válido
+            // Find earliest active circle
             for(let i = 0; i < hitCircles.length; i++) {
                 let c = hitCircles[i];
                 if(!c.active || currentTime < c.spawnTime) continue;
                 
-                let dist = Math.hypot(mouseX - c.x, mouseY - c.y);
+                // Check if cursor is anywhere INSIDE the circle radius
+                let dx = mouseX - c.x;
+                let dy = mouseY - c.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                
                 if(dist <= c.radius) {
                     let timeDiff = Math.abs(currentTime - c.targetTime);
                     
+                    // Hit window detection
                     if(timeDiff <= hw[300]) processHit(c, 300);
                     else if(timeDiff <= hw[100]) processHit(c, 100);
                     else if(timeDiff <= hw[50]) processHit(c, 50);
-                    else if(timeDiff <= hw.miss) processHit(c, 0); // Dio en el círculo pero muy fuera de tiempo
+                    else if(timeDiff <= hw.miss) processHit(c, 0); // Clicked early/late but hit the shape
+                    // If timeDiff > hw.miss, it's considered totally out of timing, ignored (notelock prevention)
                     
-                    return; // Solo romper 1 a la vez
+                    return; // Only hit 1 circle per click
                 }
             }
         }
 
-        // Eventos de Ratón
-        window.addEventListener('mousemove', e => {
-            mouseX = e.clientX; mouseY = e.clientY;
-            if(gameState === 'playing') {
-                cursorTrail.push({x: mouseX, y: mouseY, life: 1.0});
-            }
-        });
+        // Mouse Events
+        window.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
         window.addEventListener('mousedown', e => {
-            if(e.button === 0) attemptHit(); // Clic izquierdo
+            if(e.button === 0) { inputState.m1 = true; triggerAction(); }
+            if(e.button === 2) { inputState.m2 = true; triggerAction(); }
+            if(gameState === 'playing') updateHUD();
         });
+        window.addEventListener('mouseup', e => {
+            if(e.button === 0) inputState.m1 = false;
+            if(e.button === 2) inputState.m2 = false;
+            if(gameState === 'playing') updateHUD();
+        });
+        window.addEventListener('contextmenu', e => { if(gameState==='playing') e.preventDefault(); }); // disable right click menu
         
-        // Eventos Táctiles
-        canvas.addEventListener('touchstart', e => {
-            e.preventDefault();
-            for(let i=0; i<e.changedTouches.length; i++) {
-                mouseX = e.changedTouches[i].clientX;
-                mouseY = e.changedTouches[i].clientY;
-                attemptHit();
-                cursorTrail.push({x: mouseX, y: mouseY, life: 1.0});
-            }
-        }, {passive: false});
-
-        // Eventos de Teclado (Z y X)
+        // Keyboard (Z and X)
         window.addEventListener('keydown', e => {
+            if(e.repeat) return; // Prevent hold-down spam
             let key = e.key.toLowerCase();
             if((key === 'z' || key === 'x') && gameState === 'playing') {
-                if(!keysPressed[key]) {
-                    keysPressed[key] = true;
-                    attemptHit();
-                }
+                if(key === 'z') inputState.z = true;
+                if(key === 'x') inputState.x = true;
+                triggerAction();
+                updateHUD();
             }
         });
         window.addEventListener('keyup', e => {
             let key = e.key.toLowerCase();
-            if(key === 'z' || key === 'x') keysPressed[key] = false;
+            if(key === 'z') inputState.z = false;
+            if(key === 'x') inputState.x = false;
+            if(gameState === 'playing') updateHUD();
         });
 
-        function drawCursor() {
-            // Dibujar estela
+        function drawOsuCursor() {
+            // Draw authentic osu! style cursor (large bright dot with trail or outer ring)
             ctx.beginPath();
-            if(cursorTrail.length > 0) {
-                ctx.moveTo(cursorTrail[0].x, cursorTrail[0].y);
-                for(let i=1; i<cursorTrail.length; i++) {
-                    ctx.lineTo(cursorTrail[i].x, cursorTrail[i].y);
-                }
-            }
-            ctx.strokeStyle = 'rgba(0, 255, 255, 0.5)';
-            ctx.lineWidth = 6;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#00ffff';
-            ctx.stroke();
-            ctx.shadowBlur = 0;
-
-            // Dibujar cursor principal
-            ctx.beginPath();
-            ctx.arc(mouseX, mouseY, 15, 0, Math.PI*2);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            ctx.arc(mouseX, mouseY, 18, 0, Math.PI*2);
+            ctx.fillStyle = 'rgba(255, 200, 220, 0.4)'; // Outer glow
             ctx.fill();
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = '#00ffff';
-            ctx.stroke();
             
-            // Cruz interior
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.moveTo(mouseX - 8, mouseY); ctx.lineTo(mouseX + 8, mouseY);
-            ctx.moveTo(mouseX, mouseY - 8); ctx.lineTo(mouseX, mouseY + 8);
+            ctx.arc(mouseX, mouseY, 12, 0, Math.PI*2);
+            ctx.fillStyle = '#ff66aa';
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#ffffff';
             ctx.stroke();
         }
 
         function gameLoop(timestamp) {
             if(gameState !== 'playing') return;
             
-            let dt = timestamp - lastFrameTime;
             lastFrameTime = timestamp;
             if(!player || typeof player.getCurrentTime !== 'function') {
                 requestAnimationFrame(gameLoop); return;
@@ -606,10 +616,10 @@
             
             let currentVidTimeMs = player.getCurrentTime() * 1000;
             
-            // Spawner
+            // Spawn Notes
             while(currentMapIndex < mapData.length) {
                 let note = mapData[currentMapIndex];
-                if(currentVidTimeMs >= note.time - settings[difficulty].approachRate) {
+                if(currentVidTimeMs >= note.time - settings.approachRateTime) {
                     hitCircles.push(new HitCircle(note));
                     currentMapIndex++;
                 } else {
@@ -617,84 +627,68 @@
                 }
             }
 
-            // Drenaje pasivo de vida
-            health -= (settings[difficulty].drainRate / 60); 
+            // Passive Health Drain
+            health -= (settings.healthDrain * (16/1000)); // approx dt=16ms
+            if(health > 100) health = 100;
 
-            // Chequear Misses
-            let hwMiss = settings[difficulty].hitWindows.miss;
+            // Check Misses (circle expired)
+            let hwMiss = settings.hitWindows.miss;
             for(let c of hitCircles) {
                 if(c.active && currentVidTimeMs > c.targetTime + hwMiss) {
-                    processHit(c, 0);
+                    processHit(c, 0); // Time window passed completely
                 }
             }
             
-            // Actualizar entidades
-            particles.forEach(p => p.update());
-            particles = particles.filter(p => p.life > 0);
-            
+            // Update Entites
             scorePopups.forEach(sp => sp.update());
             scorePopups = scorePopups.filter(p => p.life > 0);
             
+            hitParticles.forEach(p => { p.radius += 2; p.life -= 0.05; });
+            hitParticles = hitParticles.filter(p => p.life > 0);
+
             hitCircles = hitCircles.filter(c => c.active || (currentVidTimeMs - c.targetTime < 1000));
-            
-            cursorTrail.forEach(t => t.life -= 0.05);
-            cursorTrail = cursorTrail.filter(t => t.life > 0);
 
-            // Verificar fin de canción
+            // End game check
             if(ytDuration > 0 && currentVidTimeMs >= ytDuration * 1000 - 500) {
-                endGame(true);
-                return;
+                endGame(true); return;
             }
 
-            // RENDERIZADO
-            ctx.fillStyle = '#020205'; // Fondo oscuro
+            // RENDERING
+            ctx.fillStyle = '#111111'; // Base dark
             ctx.fillRect(0, 0, width, height);
-            
-            ctx.save();
-            
-            // Screen Shake effect
-            if(shakeTime > 0) {
-                let dx = (Math.random() - 0.5) * shakeTime;
-                let dy = (Math.random() - 0.5) * shakeTime;
-                ctx.translate(dx, dy);
-                shakeTime *= 0.9;
-                if(shakeTime < 0.5) shakeTime = 0;
+
+            // Draw hit ripple effects
+            for(let p of hitParticles) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2);
+                ctx.strokeStyle = p.color;
+                ctx.lineWidth = 4 * p.life;
+                ctx.globalAlpha = p.life * 0.5;
+                ctx.stroke();
             }
+            ctx.globalAlpha = 1;
 
-            // Dibujar grid de fondo sutil
-            ctx.strokeStyle = 'rgba(255,255,255,0.02)'; ctx.lineWidth = 1;
-            ctx.beginPath();
-            for(let x = 0; x < width; x += 150) { ctx.moveTo(x,0); ctx.lineTo(x,height); }
-            for(let y = 0; y < height; y += 150) { ctx.moveTo(0,y); ctx.lineTo(width,y); }
-            ctx.stroke();
-
-            // Dibujar entidades
-            for(let c of hitCircles) c.draw(ctx, currentVidTimeMs);
-            for(let p of particles) p.draw(ctx);
+            // Draw Hit Circles (reverse order for layering)
+            for(let i = hitCircles.length - 1; i >= 0; i--) {
+                hitCircles[i].draw(ctx, currentVidTimeMs);
+            }
+            
+            // Draw Score Popups
             for(let sp of scorePopups) sp.draw(ctx);
             
-            ctx.restore();
-
-            drawCursor();
+            drawOsuCursor();
 
             if(gameState === 'playing') requestAnimationFrame(gameLoop);
         }
 
-        let player, ytDuration = 0, currentVideoId = "";
-        
-        // Exponer al scope global para que la API de YouTube lo llame
         window.onYouTubeIframeAPIReady = function() {
             player = new YT.Player('ytplayer', {
                 height: '100%', width: '100%',
                 playerVars: { 'controls': 0, 'disablekb': 1, 'fs': 0, 'rel': 0, 'showinfo': 0, 'modestbranding': 1, 'iv_load_policy': 3 },
-                events: {
-                    'onReady': () => { console.log("YT Player Ready"); },
-                    'onStateChange': onPlayerStateChange
-                }
+                events: { 'onStateChange': onPlayerStateChange }
             });
         };
 
-        // Cargar script de YT
         const tag = document.createElement('script');
         tag.src = "https://www.youtube.com/iframe_api";
         const firstScriptTag = document.getElementsByTagName('script')[0];
@@ -713,18 +707,16 @@
                 
                 document.getElementById('mainMenu').classList.add('hidden');
                 document.getElementById('hud').classList.remove('hidden');
+                document.getElementById('ytPlayerContainer').classList.add('dimmed'); // Dim background
+                
                 gameState = 'playing';
                 lastFrameTime = performance.now();
                 requestAnimationFrame(gameLoop);
             }
-            if(event.data == YT.PlayerState.ENDED && gameState === 'playing') {
-                endGame(true);
-            }
         }
 
-        function startSequence() {
+        function startGame() {
             if(!player || !player.loadVideoById) return;
-            
             let url = document.getElementById('ytUrlInput').value;
             currentVideoId = extractVideoID(url);
             
@@ -735,37 +727,33 @@
             gameState = 'loading';
             score = 0; combo = 0; maxCombo = 0; health = 100;
             hits = { 300: 0, 100: 0, 50: 0, miss: 0 };
-            hitCircles = []; particles = []; scorePopups = []; cursorTrail = [];
+            hitCircles = []; scorePopups = []; hitParticles = [];
             
             updateHUD();
             player.loadVideoById(currentVideoId);
-            player.setVolume(40);
+            player.setVolume(50);
         }
 
         function endGame(completed) {
             gameState = 'results';
             if(player && player.stopVideo) player.stopVideo();
+            document.getElementById('ytPlayerContainer').classList.remove('dimmed');
             
             document.getElementById('hud').classList.add('hidden');
             let resultsScreen = document.getElementById('resultsScreen');
             resultsScreen.classList.remove('hidden');
             
-            // Animación de entrada
-            setTimeout(() => { resultsScreen.style.transform = 'scale(1)'; }, 10);
-            
             let title = document.getElementById('resultTitle');
-            title.innerText = completed ? "Nivel Completado" : "Nivel Fallido";
-            title.style.color = completed ? "#00ffff" : "#ff0055";
+            title.innerText = completed ? "Beatmap Cleared!" : "Beatmap Failed";
+            title.style.color = completed ? "#ff66aa" : "#ff0000";
             
             let grade = calculateGrade();
             let gradeEl = document.getElementById('gradeDisplay');
-            gradeEl.innerText = grade;
-            gradeEl.className = `text-7xl font-black grade-${grade}`;
+            if(!completed) grade = 'D';
             
-            if(!completed) {
-                gradeEl.innerText = 'F';
-                gradeEl.className = 'text-7xl font-black grade-D';
-            }
+            gradeEl.innerText = grade;
+            gradeEl.className = `text-8xl font-black grade-${grade}`;
+            if(!completed) gradeEl.innerText = 'F';
             
             document.getElementById('resScore').innerText = formatScore(score);
             document.getElementById('resAcc').innerText = getAccuracy() + '%';
@@ -785,32 +773,24 @@
 
         async function saveScore() {
             let nameInput = document.getElementById('playerName');
-            let name = nameInput.value.trim() || 'Anonymous';
+            let name = nameInput.value.trim() || 'Guest';
             let btn = document.getElementById('btnSaveScore');
             
-            btn.disabled = true;
-            btn.innerText = "Guardando...";
+            btn.disabled = true; btn.innerText = "Saving...";
 
             try {
-                if(!user) throw new Error("No autenticado");
-                
+                if(!user) throw new Error("No auth");
                 const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
                 await addDoc(colRef, {
-                    name: name,
-                    score: Math.floor(score),
-                    accuracy: parseFloat(getAccuracy()),
-                    combo: maxCombo,
-                    difficulty: difficulty,
-                    videoId: currentVideoId,
-                    userId: user.uid,
+                    name: name, score: Math.floor(score),
+                    accuracy: parseFloat(getAccuracy()), combo: maxCombo,
+                    videoId: currentVideoId, userId: user.uid,
                     timestamp: serverTimestamp()
                 });
-                
-                document.getElementById('submitSection').innerHTML = `<p class="text-green-400 font-bold">¡Guardado con éxito!</p>`;
-            } catch (error) {
-                console.error("Error guardando score:", error);
-                btn.innerText = "Error";
-                btn.disabled = false;
+                document.getElementById('submitSection').innerHTML = `<p class="text-green-400 font-bold">Score Saved!</p>`;
+            } catch (e) {
+                console.error(e);
+                btn.innerText = "Error"; btn.disabled = false;
             }
         }
 
@@ -819,65 +799,51 @@
             document.getElementById('leaderboardScreen').classList.remove('hidden');
             
             let listEl = document.getElementById('leaderboardList');
-            listEl.innerHTML = `<div class="text-center text-cyan-400 py-10 animate-pulse">Consultando base de datos...</div>`;
+            listEl.innerHTML = `<div class="text-center text-pink-400 py-10 animate-pulse">Connecting to Global Rankings...</div>`;
             
             if(!isFirebaseReady) {
-                listEl.innerHTML = `<div class="text-center text-red-400 py-10">Base de datos offline.</div>`;
-                return;
+                listEl.innerHTML = `<div class="text-center text-red-400 py-10">Leaderboard Offline.</div>`; return;
             }
 
             try {
                 const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
                 const snapshot = await getDocs(colRef);
-                
                 let scores = [];
-                snapshot.forEach(doc => { scores.push({ id: doc.id, ...doc.data() }); });
+                snapshot.forEach(doc => scores.push({ id: doc.id, ...doc.data() }));
                 
-                // Ordenar en memoria (Regla de oro)
-                scores.sort((a, b) => b.score - a.score);
+                scores.sort((a, b) => b.score - a.score); // sort by score desc
                 
                 if(scores.length === 0) {
-                    listEl.innerHTML = `<div class="text-center text-gray-400 py-10">Sé el primero en jugar y dejar tu récord.</div>`;
-                    return;
+                    listEl.innerHTML = `<div class="text-center text-gray-400 py-10">No scores yet. Set the first record!</div>`; return;
                 }
 
                 let html = '';
                 scores.slice(0, 50).forEach((entry, index) => {
                     let acc = entry.accuracy !== undefined ? entry.accuracy.toFixed(2) : "0.00";
+                    let isTop3 = index < 3 ? 'text-pink-400 font-black' : 'text-gray-300 font-bold';
                     html += `
-                        <div class="leaderboard-entry">
+                        <div class="flex justify-between items-center p-3 border-b border-gray-800 hover:bg-gray-800 transition">
                             <div class="flex items-center gap-4">
-                                <span class="rank-number">#${index + 1}</span>
+                                <span class="${isTop3} w-6 text-xl">#${index+1}</span>
                                 <div>
-                                    <div class="font-bold text-white text-lg">${entry.name || 'Anonymous'}</div>
-                                    <div class="text-xs text-gray-400">Diff: ${entry.difficulty || 'N/A'} | Max Combo: ${entry.combo}x</div>
+                                    <div class="font-bold text-white text-lg">${entry.name || 'Guest'}</div>
+                                    <div class="text-xs text-gray-500">${entry.combo}x Combo</div>
                                 </div>
                             </div>
                             <div class="text-right">
-                                <div class="font-black text-cyan-300 text-xl">${formatScore(entry.score)}</div>
-                                <div class="text-sm text-gray-400">${acc}% Acc</div>
+                                <div class="font-bold text-white text-xl">${formatScore(entry.score)}</div>
+                                <div class="text-sm text-pink-300">${acc}%</div>
                             </div>
                         </div>
                     `;
                 });
                 listEl.innerHTML = html;
-            } catch (error) {
-                console.error("Error fetching leaderboard:", error);
-                listEl.innerHTML = `<div class="text-center text-red-500 py-10">Error al cargar datos.</div>`;
-            }
+            } catch (e) { listEl.innerHTML = `<div class="text-center text-red-500 py-10">Error loading data.</div>`; }
         }
 
-        document.querySelectorAll('#diffSelectors .selector-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                document.querySelectorAll('#diffSelectors .selector-btn').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                difficulty = e.target.dataset.val;
-            });
-        });
-
-        document.getElementById('btnStart').addEventListener('click', startSequence);
+        // Binds
+        document.getElementById('btnStart').addEventListener('click', startGame);
         document.getElementById('btnSaveScore').addEventListener('click', saveScore);
-        
         document.getElementById('btnLeaderboard').addEventListener('click', showLeaderboard);
         document.getElementById('btnCloseLeaderboard').addEventListener('click', () => {
             document.getElementById('leaderboardScreen').classList.add('hidden');
@@ -885,35 +851,28 @@
         });
 
         document.getElementById('btnRestart').addEventListener('click', () => {
-            let resultsScreen = document.getElementById('resultsScreen');
-            resultsScreen.style.transform = 'scale(0.9)';
-            setTimeout(() => {
-                resultsScreen.classList.add('hidden');
-                document.getElementById('mainMenu').classList.remove('hidden');
-                document.getElementById('btnStart').classList.remove('hidden');
-                document.getElementById('btnLeaderboard').classList.remove('hidden');
-                document.getElementById('loadingText').classList.add('hidden');
-                
-                // Limpiar inputs
-                document.getElementById('submitSection').innerHTML = `
-                    <p class="text-sm text-cyan-300 mb-2 font-bold">¡Nueva Puntuación Alta! Guarda tu récord:</p>
-                    <div class="flex gap-2">
-                        <input type="text" id="playerName" class="input-text m-0 flex-grow" placeholder="Ingresa tu nombre..." maxlength="15">
-                        <button id="btnSaveScore" class="btn-neon w-auto px-6 py-2">Guardar</button>
-                    </div>
-                `;
-                // Re-bind listener since innerHTML replaced it
-                document.getElementById('btnSaveScore').addEventListener('click', saveScore);
-                
-                gameState = 'menu';
-                ctx.fillStyle = '#020205';
-                ctx.fillRect(0,0,width,height);
-            }, 300);
+            document.getElementById('resultsScreen').classList.add('hidden');
+            document.getElementById('mainMenu').classList.remove('hidden');
+            document.getElementById('btnStart').classList.remove('hidden');
+            document.getElementById('btnLeaderboard').classList.remove('hidden');
+            document.getElementById('loadingText').classList.add('hidden');
+            
+            document.getElementById('submitSection').innerHTML = `
+                <p class="text-sm text-pink-300 mb-3 font-bold">New High Score! Save to Leaderboard:</p>
+                <div class="flex gap-2">
+                    <input type="text" id="playerName" class="input-text m-0 flex-grow" placeholder="Your Name" maxlength="15">
+                    <button id="btnSaveScore" class="btn-osu w-auto px-6 py-2" style="border-radius: 8px;">Submit</button>
+                </div>
+            `;
+            document.getElementById('btnSaveScore').addEventListener('click', saveScore);
+            
+            gameState = 'menu';
+            ctx.fillStyle = '#111'; ctx.fillRect(0,0,width,height);
+            drawOsuCursor(); // Draw cursor once to avoid blank screen
         });
 
-        // Frame estático de fondo inicial
-        ctx.fillStyle = '#020205';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Initial render frame
+        ctx.fillStyle = '#111'; ctx.fillRect(0,0,canvas.width,canvas.height);
 
     </script>
 </body>
