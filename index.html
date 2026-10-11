@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>osu! Web Ultimate</title>
+    <title>osu! Web Ultimate Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Varela+Round&family=Torus:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
@@ -19,14 +19,14 @@
             width: 100vw; height: 100vh;
             background-color: #050505; font-family: var(--ui-font);
             color: white; user-select: none; -webkit-user-select: none;
-            touch-action: none; /* Prevents mobile scrolling */
+            touch-action: none; /* CRITICAL: Prevents mobile scrolling */
             cursor: none; /* Hide default cursor */
         }
 
         /* YouTube Background */
         #ytContainer {
             position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-            opacity: 0.15; z-index: -1; pointer-events: none; /* CRITICAL FIX: prevents iframe from stealing clicks */
+            opacity: 0.15; z-index: -1; pointer-events: none; /* Prevents iframe from stealing clicks */
             transition: opacity 0.5s ease;
         }
         .playing-dim { opacity: 0.05 !important; }
@@ -36,28 +36,31 @@
             display: block; width: 100%; height: 100%;
             position: absolute; top: 0; left: 0; z-index: 10;
         }
+        
+        #flashOverlay {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: white; opacity: 0; z-index: 11; pointer-events: none;
+            transition: opacity 0.1s ease-out;
+        }
 
-        /* UI Overlay */
         .ui-layer {
             position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
             z-index: 20; display: flex; flex-direction: column;
             justify-content: center; align-items: center; pointer-events: none;
         }
 
-        /* Glassmorphism Menus */
         .glass-panel {
-            pointer-events: auto; background: rgba(15, 10, 20, 0.7);
+            pointer-events: auto; background: rgba(15, 10, 20, 0.85);
             backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 102, 170, 0.2); border-radius: 24px;
+            border: 1px solid rgba(255, 102, 170, 0.3); border-radius: 24px;
             padding: 3rem; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(255, 102, 170, 0.05);
-            width: 90%; max-width: 500px; text-align: center;
+            width: 90%; max-width: 550px; text-align: center;
         }
 
-        /* Inputs & Buttons */
         .input-box {
             width: 100%; padding: 14px 20px; border-radius: 12px;
             background: rgba(0, 0, 0, 0.5); border: 2px solid rgba(255, 102, 170, 0.3);
-            color: white; font-family: var(--ui-font); font-size: 1rem; margin-bottom: 1.5rem;
+            color: white; font-family: var(--ui-font); font-size: 1rem; margin-bottom: 1rem;
             transition: all 0.2s; pointer-events: auto;
         }
         .input-box:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 15px rgba(255, 102, 170, 0.4); }
@@ -122,8 +125,22 @@
         .grade-C { color: #ff8800; text-shadow: 0 0 30px #ff8800; }
         .grade-D { color: #ff3333; text-shadow: 0 0 30px #ff3333; }
         
-        .progress-bar-container { position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; background: rgba(0,0,0,0.6); }
+        .progress-bar-container { position: absolute; bottom: 0; left: 0; width: 100%; height: 6px; background: rgba(0,0,0,0.6); z-index: 15;}
         .progress-bar-fill { height: 100%; width: 0%; background: var(--primary); box-shadow: 0 0 10px var(--primary); }
+
+        #editorUI {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 120px;
+            background: rgba(10, 10, 15, 0.9); border-top: 1px solid var(--primary);
+            z-index: 30; display: flex; flex-direction: column; pointer-events: auto;
+        }
+        .editor-timeline { width: 100%; height: 40px; background: #222; position: relative; cursor: pointer; }
+        .editor-playhead { position: absolute; top: 0; width: 2px; height: 100%; background: #ff0000; z-index: 5; pointer-events: none;}
+        .editor-note { position: absolute; top: 10px; width: 10px; height: 20px; background: var(--primary); border-radius: 5px; }
+        .editor-controls { display: flex; justify-content: center; align-items: center; padding: 10px; gap: 10px; }
+        .editor-btn { background: #333; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; }
+        .editor-btn:hover { background: #555; }
+        
+        textarea#exportArea { width: 100%; height: 80px; background: #000; color: #0f0; font-family: monospace; font-size: 10px; margin-top: 10px; resize: none;}
     </style>
 </head>
 <body>
@@ -133,24 +150,33 @@
 
 <!-- Main Game Canvas -->
 <canvas id="gameCanvas"></canvas>
+<div id="flashOverlay"></div>
 
 <div id="mainMenu" class="ui-layer">
     <div class="glass-panel">
         <h1 class="text-6xl font-black mb-1" style="color: var(--primary); text-shadow: 0 0 25px rgba(255,102,170,0.6);">osu!</h1>
-        <p class="text-sm font-bold tracking-widest text-pink-300 mb-8 opacity-80">WEB ULTIMATE</p>
+        <p class="text-sm font-bold tracking-widest text-pink-300 mb-6 opacity-80">WEB ULTIMATE</p>
         
         <input type="text" id="ytInput" class="input-box" placeholder="YouTube Video URL" value="https://www.youtube.com/watch?v=dQw4w9WgXcQ">
-        <select id="diffSelect" class="input-box">
-            <option value="easy">Easy</option>
-            <option value="normal" selected>Normal</option>
-            <option value="hard">Hard</option>
-        </select>
         
-        <div class="flex flex-col gap-3 mt-2">
-            <button class="btn w-full" id="btnPlay">Play</button>
-            <button class="btn btn-outline w-full" id="btnRankings">Global Rankings</button>
+        <div class="flex gap-2 mb-4">
+            <select id="diffSelect" class="input-box mb-0 flex-1">
+                <option value="easy">Easy</option>
+                <option value="normal" selected>Normal</option>
+                <option value="hard">Hard</option>
+            </select>
+            <select id="modeSelect" class="input-box mb-0 flex-1">
+                <option value="auto">Auto Generator</option>
+                <option value="custom">Custom Beatmap</option>
+            </select>
         </div>
-        <p id="loadingText" class="mt-4 text-pink-400 font-bold hidden animate-pulse">Loading Beatmap...</p>
+        
+        <div class="grid grid-cols-2 gap-3 mt-2">
+            <button class="btn col-span-2" id="btnPlay">Play</button>
+            <button class="btn btn-outline" id="btnEditor">Beatmap Editor</button>
+            <button class="btn btn-outline" id="btnRankings">Global Rankings</button>
+        </div>
+        <p id="loadingText" class="mt-4 text-pink-400 font-bold hidden animate-pulse">Loading Video...</p>
     </div>
 </div>
 
@@ -172,6 +198,23 @@
     </div>
     
     <div class="progress-bar-container"><div id="songProgress" class="progress-bar-fill"></div></div>
+</div>
+
+<div id="editorUI" class="hidden">
+    <div class="editor-timeline" id="eTimeline">
+        <div class="editor-playhead" id="ePlayhead"></div>
+        <div id="eNotesContainer"></div>
+    </div>
+    <div class="editor-controls">
+        <button class="editor-btn" id="eBtnPlayPause">Play/Pause</button>
+        <button class="editor-btn" id="eBtnClear">Clear Notes</button>
+        <button class="editor-btn" id="eBtnExport">Export JSON</button>
+        <button class="editor-btn" id="eBtnImport">Import JSON</button>
+        <button class="btn px-6 py-2 ml-auto text-sm" id="eBtnExit">Exit Editor</button>
+    </div>
+    <div id="exportContainer" class="hidden px-4">
+        <textarea id="exportArea"></textarea>
+    </div>
 </div>
 
 <div id="resultsScreen" class="ui-layer hidden">
@@ -227,10 +270,9 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, serverTimestamp, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    // Global variables exposed for the non-module script
-    window.appId = typeof __app_id !== 'undefined' ? __app_id : 'osu-ultimate-web';
+    window.appId = typeof __app_id !== 'undefined' ? __app_id : 'osu-ultimate-web-v2';
     let db, auth, user, isReady = false;
 
     async function initFb() {
@@ -280,26 +322,26 @@
     let circleRadius = 55;
     const HIT_WINDOWS = { 300: 50, 100: 100, 50: 150, miss: 200 };
 
-    // State
-    let gameState = 'menu'; // menu, playing, results
-    let currentMap = [];
-    let activeCircles = [];
+    // Global State
+    let gameState = 'menu'; // menu, playing, editing, results
+    let activeObjects = [];
     let hitTexts = [];
     let particles = [];
     let cursorTrail = [];
     let shakeAmount = 0;
+    let customBeatmap = []; // Stores map data for custom/editor
 
-    // Track mouse globally relative to canvas (CRITICAL FIX)
+    // Input tracking (Crucial for precise mechanics)
     let mouseX = width / 2;
     let mouseY = height / 2;
+    let isHolding = false;
+    let lastMouseX = mouseX, lastMouseY = mouseY;
+    let spinnerRot = 0; // Accumulated rotation for spinner
     
-    // Key state for visualizer
     const inputState = { m1: false, m2: false, z: false, x: false };
-
-    // Player Stats
     let stats = { score: 0, combo: 0, maxCombo: 0, health: 100, hits: {300:0, 100:0, 50:0, miss:0} };
 
-    // YouTube API Integration
+    // YouTube API
     let ytPlayer, ytDuration = 0, currentVidId = '';
     
     window.onYouTubeIframeAPIReady = function() {
@@ -319,70 +361,96 @@
         return (m && m[1].length === 11) ? m[1] : 'dQw4w9WgXcQ';
     }
 
-    
     function updateMousePos(e) {
-        // getBoundingClientRect ensures absolute pixel accuracy even if scaling occurs
         const rect = canvas.getBoundingClientRect();
-        mouseX = e.clientX - rect.left;
-        mouseY = e.clientY - rect.top;
+        lastMouseX = mouseX; lastMouseY = mouseY;
+        // Exact coordinate mapping
+        mouseX = (e.clientX - rect.left) * (canvas.width / rect.width);
+        mouseY = (e.clientY - rect.top) * (canvas.height / rect.height);
     }
 
-    // Keep mouse coordinates constantly updated
     window.addEventListener('mousemove', updateMousePos);
 
-    function attemptHit() {
+    function handleInputDown() {
+        isHolding = true;
+        if (gameState === 'editing') {
+            addNoteToBeatmap(mouseX, mouseY);
+            return;
+        }
+        
         if (gameState !== 'playing' || !ytPlayer || typeof ytPlayer.getCurrentTime !== 'function') return;
         
         let tMs = ytPlayer.getCurrentTime() * 1000;
         
-        // Find earliest circle we are hovering over
-        for (let i = 0; i < activeCircles.length; i++) {
-            let c = activeCircles[i];
-            if (!c.active || tMs < c.spawnTime) continue; // Not spawned yet
+        // Find hit object
+        for (let i = 0; i < activeObjects.length; i++) {
+            let obj = activeObjects[i];
+            if (!obj.active || tMs < obj.spawnTime) continue; 
             
-            let dist = Math.hypot(mouseX - c.x, mouseY - c.y);
-            if (dist <= circleRadius) {
-                let timeDiff = Math.abs(tMs - c.targetTime);
-                
-                // Only register if within miss window. If we click WAY too early, ignore it.
-                if (timeDiff <= HIT_WINDOWS.miss) {
-                    let scoreVal = 0;
-                    if (timeDiff <= HIT_WINDOWS[300]) scoreVal = 300;
-                    else if (timeDiff <= HIT_WINDOWS[100]) scoreVal = 100;
-                    else if (timeDiff <= HIT_WINDOWS[50]) scoreVal = 50;
-                    
-                    registerHit(c, scoreVal);
-                    return; // Important: Only hit ONE circle per click
+            if (obj.type === 'circle' || obj.type === 'slider') {
+                // Check dist to start circle
+                let dist = Math.hypot(mouseX - obj.x, mouseY - obj.y);
+                if (dist <= circleRadius) {
+                    let timeDiff = Math.abs(tMs - obj.targetTime);
+                    if (timeDiff <= HIT_WINDOWS.miss) {
+                        let scoreVal = 0;
+                        if (timeDiff <= HIT_WINDOWS[300]) scoreVal = 300;
+                        else if (timeDiff <= HIT_WINDOWS[100]) scoreVal = 100;
+                        else if (timeDiff <= HIT_WINDOWS[50]) scoreVal = 50;
+                        
+                        if (obj.type === 'circle') {
+                            registerHit(obj, scoreVal);
+                        } else if (obj.type === 'slider') {
+                            // Slider hit initiated
+                            obj.isTracking = true;
+                            obj.startHitVal = scoreVal;
+                            // Flash effect on hit
+                            if(scoreVal === 300) screenFlash();
+                        }
+                        return; // Hit one object per click
+                    }
                 }
             }
         }
     }
 
-    // Mouse Input
-    window.addEventListener('mousedown', (e) => {
-        if(gameState === 'playing') e.preventDefault(); // Stop default browser actions
-        updateMousePos(e);
+    function handleInputUp() {
+        isHolding = false;
         
-        if (e.button === 0) { inputState.m1 = true; attemptHit(); }
-        if (e.button === 2) { inputState.m2 = true; attemptHit(); }
+        // Check sliders release
+        if (gameState === 'playing') {
+             for (let i = 0; i < activeObjects.length; i++) {
+                 let obj = activeObjects[i];
+                 if (obj.active && obj.type === 'slider' && obj.isTracking) {
+                     obj.isTracking = false; // Released early = miss or partial score handled in loop
+                 }
+             }
+        }
+    }
+
+    // Bindings
+    window.addEventListener('mousedown', (e) => {
+        if(gameState === 'playing' || gameState === 'editing') e.preventDefault();
+        updateMousePos(e);
+        if (e.button === 0) { inputState.m1 = true; handleInputDown(); }
+        if (e.button === 2) { inputState.m2 = true; handleInputDown(); }
         updateKeyUI();
     }, { passive: false });
 
     window.addEventListener('mouseup', (e) => {
         if (e.button === 0) inputState.m1 = false;
         if (e.button === 2) inputState.m2 = false;
+        if(!inputState.m1 && !inputState.m2 && !inputState.z && !inputState.x) handleInputUp();
         updateKeyUI();
     });
 
-    // Keyboard Input (Z and X)
     window.addEventListener('keydown', (e) => {
-        if (e.repeat) return; // Prevent hold-down auto-repeat
+        if (e.repeat) return; 
         let k = e.key.toLowerCase();
-        
         if (k === 'z' || k === 'x') {
-            if(gameState === 'playing') e.preventDefault(); // Prevent scrolling
+            if(gameState === 'playing' || gameState === 'editing') e.preventDefault();
             inputState[k] = true;
-            attemptHit(); // Triggers hit using current mouseX/mouseY
+            handleInputDown();
             updateKeyUI();
         }
     }, { passive: false });
@@ -391,80 +459,181 @@
         let k = e.key.toLowerCase();
         if (k === 'z' || k === 'x') {
             inputState[k] = false;
+            if(!inputState.m1 && !inputState.m2 && !inputState.z && !inputState.x) handleInputUp();
             updateKeyUI();
         }
     });
 
-    // Disable context menu so right click (M2) works cleanly
-    window.addEventListener('contextmenu', e => { if(gameState === 'playing') e.preventDefault(); });
+    window.addEventListener('contextmenu', e => { if(gameState==='playing'||gameState==='editing') e.preventDefault(); });
 
-    // Touch support (mobile)
+    // Touch
     window.addEventListener('touchstart', (e) => {
-        if(gameState === 'playing') e.preventDefault();
+        if(gameState === 'playing'||gameState==='editing') e.preventDefault();
         const rect = canvas.getBoundingClientRect();
-        mouseX = e.touches[0].clientX - rect.left;
-        mouseY = e.touches[0].clientY - rect.top;
-        inputState.m1 = true;
-        attemptHit();
-        updateKeyUI();
+        mouseX = (e.touches[0].clientX - rect.left) * (canvas.width / rect.width);
+        mouseY = (e.touches[0].clientY - rect.top) * (canvas.height / rect.height);
+        inputState.m1 = true; handleInputDown(); updateKeyUI();
     }, { passive: false });
     
     window.addEventListener('touchend', (e) => {
-        inputState.m1 = false;
-        updateKeyUI();
+        inputState.m1 = false; handleInputUp(); updateKeyUI();
     });
 
-
-    
-    class Circle {
-        constructor(time, x, y, colorIdx, num) {
+    class HitObject {
+        constructor(time, colorIdx, num) {
             this.targetTime = time;
             this.spawnTime = time - approachRate;
-            this.x = x; this.y = y;
             this.color = COLORS[colorIdx % COLORS.length];
             this.num = num;
             this.active = true;
         }
+        drawApproach(ctx, progress, x, y) {
+            if (progress <= 1.0) {
+                let scale = 1 + 2 * (1 - progress); 
+                ctx.beginPath(); ctx.arc(x, y, circleRadius * scale, 0, Math.PI * 2);
+                ctx.lineWidth = 4; ctx.strokeStyle = this.color; ctx.stroke();
+            }
+        }
+        drawCircleBody(ctx, x, y, num, alpha) {
+            ctx.globalAlpha = alpha;
+            ctx.beginPath(); ctx.arc(x, y, circleRadius, 0, Math.PI * 2);
+            let grad = ctx.createRadialGradient(x, y, 0, x, y, circleRadius);
+            grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.2, this.color);
+            grad.addColorStop(0.9, this.color); grad.addColorStop(1, '#111');
+            ctx.fillStyle = grad; ctx.fill();
+            
+            ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
+            ctx.beginPath(); ctx.arc(x, y, circleRadius+1, 0, Math.PI*2);
+            ctx.lineWidth = 1; ctx.strokeStyle = '#000'; ctx.stroke();
 
+            ctx.fillStyle = '#fff'; ctx.font = `bold ${circleRadius * 0.8}px var(--ui-font)`;
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 4;
+            ctx.fillText(num, x, y + 2); ctx.shadowBlur = 0;
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    class Circle extends HitObject {
+        constructor(time, x, y, colorIdx, num) {
+            super(time, colorIdx, num);
+            this.type = 'circle'; this.x = x; this.y = y;
+        }
         draw(ctx, tMs) {
             if (!this.active) return;
             let progress = (tMs - this.spawnTime) / approachRate;
             if (progress < 0 || progress > 1.2) return;
+            let alpha = Math.min(1, progress * 4);
+            
+            this.drawCircleBody(ctx, this.x, this.y, this.num, alpha);
+            this.drawApproach(ctx, progress, this.x, this.y);
+        }
+    }
 
-            let alpha = Math.min(1, progress * 4); // Fast fade in
+    class Slider extends HitObject {
+        constructor(time, x, y, endX, endY, colorIdx, num) {
+            super(time, colorIdx, num);
+            this.type = 'slider'; this.x = x; this.y = y;
+            this.endX = endX; this.endY = endY;
+            this.duration = 600; // time to travel
+            this.endTime = time + this.duration;
+            this.isTracking = false;
+            this.startHitVal = 0;
+        }
+        draw(ctx, tMs) {
+            if (!this.active) return;
+            let progress = (tMs - this.spawnTime) / approachRate;
+            if (progress < 0) return;
+            
+            let alpha = Math.min(1, progress * 4);
             ctx.globalAlpha = alpha;
 
-            // Base Circle
+            // Draw Path
             ctx.beginPath();
-            ctx.arc(this.x, this.y, circleRadius, 0, Math.PI * 2);
-            let grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, circleRadius);
-            grad.addColorStop(0, '#ffffff');
-            grad.addColorStop(0.2, this.color);
-            grad.addColorStop(0.9, this.color);
-            grad.addColorStop(1, '#111');
-            ctx.fillStyle = grad;
-            ctx.fill();
+            ctx.moveTo(this.x, this.y); ctx.lineTo(this.endX, this.endY);
+            ctx.lineWidth = circleRadius * 2;
+            ctx.strokeStyle = `rgba(50, 50, 50, 0.5)`; ctx.lineCap = 'round'; ctx.stroke();
+            ctx.lineWidth = circleRadius * 2 - 4;
+            ctx.strokeStyle = this.color; ctx.stroke();
 
-            // Borders
-            ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.stroke();
-            ctx.beginPath(); ctx.arc(this.x, this.y, circleRadius+1, 0, Math.PI*2);
-            ctx.lineWidth = 1; ctx.strokeStyle = '#000'; ctx.stroke();
-
-            // Number
-            ctx.fillStyle = '#fff';
-            ctx.font = `bold ${circleRadius * 0.8}px var(--ui-font)`;
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 4;
-            ctx.fillText(this.num, this.x, this.y + 2);
-            ctx.shadowBlur = 0;
-
-            // Approach Circle
-            if (progress <= 1.0) {
-                let scale = 1 + 2 * (1 - progress); // Starts at 3x, shrinks to 1x
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, circleRadius * scale, 0, Math.PI * 2);
-                ctx.lineWidth = 4; ctx.strokeStyle = this.color; ctx.stroke();
+            // Draw End Circle
+            this.drawCircleBody(ctx, this.endX, this.endY, "", alpha);
+            
+            if (tMs < this.targetTime) {
+                // Draw Start Circle & Approach
+                this.drawCircleBody(ctx, this.x, this.y, this.num, alpha);
+                this.drawApproach(ctx, progress, this.x, this.y);
+            } else if (tMs <= this.endTime) {
+                // Draw Moving Ball
+                let slideProgress = (tMs - this.targetTime) / this.duration;
+                let bx = this.x + (this.endX - this.x) * slideProgress;
+                let by = this.y + (this.endY - this.y) * slideProgress;
+                
+                // Track logic
+                if (this.isTracking) {
+                    let dist = Math.hypot(mouseX - bx, mouseY - by);
+                    if (dist > circleRadius * 1.5) this.isTracking = false; // Mouse slipped off
+                    else {
+                        // Highlight slider ball
+                        ctx.beginPath(); ctx.arc(bx, by, circleRadius*1.2, 0, Math.PI*2);
+                        ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fill();
+                    }
+                }
+                
+                this.drawCircleBody(ctx, bx, by, "", alpha);
             }
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    class Spinner extends HitObject {
+        constructor(time, duration) {
+            super(time, 0, "");
+            this.type = 'spinner';
+            this.endTime = time + duration;
+            this.rot = 0;
+            this.reqRots = (duration / 1000) * Math.PI * 4; // required rotations based on duration
+        }
+        draw(ctx, tMs) {
+            if (!this.active) return;
+            if (tMs < this.spawnTime || tMs > this.endTime) return;
+            
+            let alpha = tMs < this.targetTime ? (tMs - this.spawnTime)/(approachRate) : 1;
+            ctx.globalAlpha = alpha;
+            
+            let cx = width/2, cy = height/2;
+            let maxR = Math.min(width, height) * 0.4;
+            
+            // Spin logic if active
+            if (tMs >= this.targetTime && isHolding) {
+                let a1 = Math.atan2(lastMouseY - cy, lastMouseX - cx);
+                let a2 = Math.atan2(mouseY - cy, mouseX - cx);
+                let diff = a2 - a1;
+                // handle wraparound
+                if (diff > Math.PI) diff -= Math.PI*2;
+                if (diff < -Math.PI) diff += Math.PI*2;
+                this.rot += Math.abs(diff);
+            }
+
+            // Draw outer ring
+            ctx.beginPath(); ctx.arc(cx, cy, maxR, 0, Math.PI*2);
+            ctx.strokeStyle = '#00AAFF'; ctx.lineWidth = 10; ctx.stroke();
+            
+            // Draw progress circle
+            let prog = Math.min(1, this.rot / this.reqRots);
+            ctx.beginPath(); ctx.arc(cx, cy, maxR - 20, 0, Math.PI*2 * prog);
+            ctx.strokeStyle = '#fff'; ctx.lineWidth = 20; ctx.stroke();
+
+            // Center
+            ctx.beginPath(); ctx.arc(cx, cy, 20, 0, Math.PI*2);
+            ctx.fillStyle = '#ff66aa'; ctx.fill();
+
+            // Clear text
+            if(prog >= 1) {
+                ctx.fillStyle = '#0f0'; ctx.font = 'bold 40px var(--ui-font)';
+                ctx.textAlign = 'center'; ctx.fillText("CLEAR", cx, cy - maxR - 20);
+            }
+            
             ctx.globalAlpha = 1;
         }
     }
@@ -479,21 +648,14 @@
         }
         draw(ctx) {
             if (this.life <= 0) return;
-            this.life -= 0.02;
-            this.y -= 0.5; // Float up slightly
-            
-            let scale = this.s * (1 + (1 - this.life)*0.2); // Expand slightly as it fades
-            
+            this.life -= 0.02; this.y -= 0.5; 
+            let scale = this.s * (1 + (1 - this.life)*0.2); 
             ctx.globalAlpha = Math.max(0, this.life);
-            ctx.fillStyle = this.c;
-            ctx.font = `900 ${40 * scale}px var(--score-font)`;
+            ctx.fillStyle = this.c; ctx.font = `900 ${40 * scale}px var(--score-font)`;
             ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            
-            // Text shadow
             ctx.shadowColor = '#000'; ctx.shadowBlur = 6; ctx.shadowOffsetX = 2; ctx.shadowOffsetY = 2;
             ctx.fillText(this.t, this.x, this.y);
-            ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
-            ctx.globalAlpha = 1;
+            ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0; ctx.globalAlpha = 1;
         }
     }
 
@@ -502,44 +664,53 @@
             let ang = Math.random() * Math.PI * 2;
             let spd = Math.random() * 5 + 2;
             particles.push({
-                x: x, y: y,
-                vx: Math.cos(ang)*spd, vy: Math.sin(ang)*spd,
+                x: x, y: y, vx: Math.cos(ang)*spd, vy: Math.sin(ang)*spd,
                 life: 1.0, color: color, size: Math.random()*4+2
             });
         }
     }
 
-    function registerHit(circle, val) {
-        circle.active = false;
+    function screenFlash() {
+        let overlay = document.getElementById('flashOverlay');
+        overlay.style.transition = 'none';
+        overlay.style.opacity = '0.3';
+        setTimeout(() => {
+            overlay.style.transition = 'opacity 0.2s ease-out';
+            overlay.style.opacity = '0';
+        }, 10);
+    }
+
+    function registerHit(obj, val) {
+        obj.active = false;
         stats.hits[val===0 ? 'miss' : val]++;
         
         if (val > 0) {
             stats.combo++;
             if (stats.combo > stats.maxCombo) stats.maxCombo = stats.combo;
-            stats.score += val + (val * stats.combo * 0.1); // Standard formula approximation
-            
-            // Healing
+            stats.score += val + (val * stats.combo * 0.1); 
             let heal = val === 300 ? 5 : (val === 100 ? 2 : 0.5);
             stats.health = Math.min(100, stats.health + heal);
             
-            createParticleBurst(circle.x, circle.y, circle.color);
+            let px = obj.type === 'slider' ? obj.endX : (obj.type === 'spinner' ? width/2 : obj.x);
+            let py = obj.type === 'slider' ? obj.endY : (obj.type === 'spinner' ? height/2 : obj.y);
+            createParticleBurst(px, py, obj.color || '#fff');
             
-            // UI Pulse
+            if(val === 300) screenFlash();
+            
             let ct = document.getElementById('comboTxt');
             ct.classList.remove('combo-pulse'); void ct.offsetWidth; ct.classList.add('combo-pulse');
         } else {
-            stats.combo = 0;
-            stats.health -= 15; // Penalty
-            shakeAmount = 15; // Screen shake
+            stats.combo = 0; stats.health -= 15; shakeAmount = 20; 
         }
         
-        hitTexts.push(new HitText(circle.x, circle.y, val));
+        let tx = obj.type === 'spinner' ? width/2 : obj.x;
+        let ty = obj.type === 'spinner' ? height/2 : obj.y;
+        hitTexts.push(new HitText(tx, ty, val));
         updateHUD();
         
         if (stats.health <= 0) endGame(false);
     }
 
-    
     function updateHUD() {
         document.getElementById('scoreTxt').innerText = Math.floor(stats.score).toString().padStart(8, '0');
         document.getElementById('comboTxt').innerText = stats.combo + 'x';
@@ -547,12 +718,14 @@
         let total = stats.hits[300] + stats.hits[100] + stats.hits[50] + stats.hits.miss;
         let acc = total === 0 ? 100 : ((stats.hits[300]*300 + stats.hits[100]*100 + stats.hits[50]*50) / (total*300) * 100);
         document.getElementById('accTxt').innerText = acc.toFixed(2) + '%';
-        
         document.getElementById('healthFill').style.width = Math.max(0, stats.health) + '%';
         
         if (ytPlayer && ytDuration > 0) {
             let p = (ytPlayer.getCurrentTime() / ytDuration) * 100;
             document.getElementById('songProgress').style.width = p + '%';
+            if(gameState === 'editing') {
+                document.getElementById('ePlayhead').style.left = p + '%';
+            }
         }
     }
 
@@ -564,96 +737,84 @@
     }
 
     function gameLoop() {
-        if (gameState !== 'playing') return;
+        if (gameState !== 'playing' && gameState !== 'editing') return;
         requestAnimationFrame(gameLoop);
         
-        // Background clear (solid black for performance and clean trails)
-        ctx.fillStyle = '#050505';
-        ctx.fillRect(0, 0, width, height);
-
+        ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, width, height);
         if (!ytPlayer || !ytPlayer.getCurrentTime) return;
         let tMs = ytPlayer.getCurrentTime() * 1000;
 
-        // Apply Screen Shake
         ctx.save();
         if (shakeAmount > 0) {
-            let dx = (Math.random() - 0.5) * shakeAmount;
-            let dy = (Math.random() - 0.5) * shakeAmount;
-            ctx.translate(dx, dy);
-            shakeAmount *= 0.8; // Decay
-            if(shakeAmount < 0.5) shakeAmount = 0;
+            ctx.translate((Math.random()-0.5)*shakeAmount, (Math.random()-0.5)*shakeAmount);
+            shakeAmount *= 0.8; if(shakeAmount < 0.5) shakeAmount = 0;
         }
 
-        // Logic Updates
-        stats.health -= 0.05; // Constant drain
-        
-        // Miss check
-        for (let i = 0; i < activeCircles.length; i++) {
-            let c = activeCircles[i];
-            if (c.active && tMs > c.targetTime + HIT_WINDOWS.miss) {
-                registerHit(c, 0); // Completely missed the window
+        if(gameState === 'playing') {
+            stats.health -= 0.05; 
+            
+            // Check expirations
+            for (let i = 0; i < activeObjects.length; i++) {
+                let obj = activeObjects[i];
+                if (!obj.active) continue;
+                
+                if (obj.type === 'circle' && tMs > obj.targetTime + HIT_WINDOWS.miss) {
+                    registerHit(obj, 0); 
+                } else if (obj.type === 'slider' && tMs > obj.endTime) {
+                    // Slider finished
+                    if(obj.isTracking) registerHit(obj, obj.startHitVal); // Success if held to end
+                    else registerHit(obj, 0); // Missed or let go early
+                } else if (obj.type === 'spinner' && tMs > obj.endTime) {
+                    if(obj.rot >= obj.reqRots) registerHit(obj, 300);
+                    else registerHit(obj, 0);
+                }
             }
+            
+            if (ytDuration > 0 && tMs >= ytDuration * 1000 - 1000) endGame(true);
         }
-        
-        // Clean up memory
-        activeCircles = activeCircles.filter(c => c.active || (tMs - c.targetTime < 1000));
+
+        // Cleanup
+        activeObjects = activeObjects.filter(c => c.active || (tMs - (c.endTime || c.targetTime) < 1000));
         hitTexts = hitTexts.filter(h => h.life > 0);
-        
-        // Win condition
-        if (ytDuration > 0 && tMs >= ytDuration * 1000 - 1000) {
-            endGame(true);
-        }
 
-        // --- RENDERING ---
-
-        // Cursor Trail
+        // Render Trail
         cursorTrail.push({ x: mouseX, y: mouseY, l: 1.0 });
-        if (cursorTrail.length > 25) cursorTrail.shift();
-        
+        if (cursorTrail.length > 30) cursorTrail.shift();
         ctx.beginPath();
         for(let i=0; i<cursorTrail.length; i++) {
-            let p = cursorTrail[i];
-            p.l -= 0.05;
+            let p = cursorTrail[i]; p.l -= 0.05;
             if(p.l <= 0) continue;
-            ctx.lineWidth = 12 * p.l;
-            ctx.strokeStyle = `rgba(255, 102, 170, ${p.l})`;
-            ctx.lineCap = 'round';
-            if(i===0) ctx.moveTo(p.x, p.y);
-            else ctx.lineTo(p.x, p.y);
+            ctx.lineWidth = 14 * p.l; ctx.strokeStyle = `rgba(255, 102, 170, ${p.l})`; ctx.lineCap = 'round';
+            if(i===0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
         }
         ctx.stroke();
 
-        // Particles
+        // Render Particles
         for (let i=particles.length-1; i>=0; i--) {
-            let p = particles[i];
-            p.x += p.vx; p.y += p.vy; p.life -= 0.03;
+            let p = particles[i]; p.x += p.vx; p.y += p.vy; p.life -= 0.03;
             if(p.life <= 0) { particles.splice(i,1); continue; }
             ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
             ctx.fillStyle = p.color; ctx.globalAlpha = p.life; ctx.fill();
         }
         ctx.globalAlpha = 1;
 
-        // Draw Circles (Reverse order so newest/earliest are on top)
-        for (let i = activeCircles.length - 1; i >= 0; i--) {
-            activeCircles[i].draw(ctx, tMs);
-        }
-
-        // Draw Score Popups
+        // Render Objects (reverse)
+        for (let i = activeObjects.length - 1; i >= 0; i--) activeObjects[i].draw(ctx, tMs);
         for (let i=0; i<hitTexts.length; i++) hitTexts[i].draw(ctx);
 
-        // Custom Osu Cursor
+        // Cursor
         ctx.beginPath(); ctx.arc(mouseX, mouseY, 15, 0, Math.PI*2);
         ctx.fillStyle = 'rgba(255, 150, 200, 0.3)'; ctx.fill();
         ctx.beginPath(); ctx.arc(mouseX, mouseY, 8, 0, Math.PI*2);
         ctx.fillStyle = '#ff66aa'; ctx.fill();
         ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
 
-        ctx.restore(); // Restore from shake translation
+        ctx.restore();
+        
+        if(gameState === 'editing') updateHUD(); // update timeline
     }
 
-
-    
-    function generateMap(duration, diff) {
+    function generateAutoMap(duration, diff) {
         let map = [];
         let seed = currentVidId.charCodeAt(0) + currentVidId.charCodeAt(currentVidId.length-1);
         const random = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
@@ -661,58 +822,169 @@
         approachRate = diff === 'hard' ? 900 : (diff === 'easy' ? 1800 : 1200);
         let interval = diff === 'hard' ? 350 : (diff === 'easy' ? 800 : 500);
         let pad = circleRadius * 1.5;
-        
         let cIdx = 0; let num = 1;
         
         for (let t = 2000; t < duration * 1000 - 3000; t += interval) {
-            let x = pad + random() * (width - pad*2);
-            let y = pad + random() * (height - pad*2);
-            
-            // Randomize interval slightly for rhythm feel
+            let x = pad + random() * (width - pad*2); let y = pad + random() * (height - pad*2);
             let r = random();
-            if (r > 0.8 && diff !== 'easy') interval = 250; // fast stream
+            
+            if (r > 0.8 && diff !== 'easy') interval = 250; 
             else if (r > 0.4) interval = diff === 'hard' ? 350 : 500;
             else interval = diff === 'easy' ? 800 : 600;
 
-            if (num > 6 || random() > 0.8) { num = 1; cIdx++; } // Combo break
+            if (num > 6 || random() > 0.8) { num = 1; cIdx++; } 
             
-            map.push(new Circle(t + (random()*40-20), x, y, cIdx, num++));
+            // Generate some sliders/spinners procedurally
+            let typeRand = random();
+            let exactTime = t + (random()*40-20);
+            
+            if (typeRand > 0.85 && t < duration * 1000 - 5000) {
+                // Spinner
+                map.push(new Spinner(exactTime, 2000));
+                t += 2000; // skip time
+                num = 1; cIdx++;
+            } else if (typeRand > 0.65) {
+                // Slider
+                let ex = Math.max(pad, Math.min(width-pad, x + (random()>0.5?1:-1) * 300));
+                let ey = Math.max(pad, Math.min(height-pad, y + (random()>0.5?1:-1) * 300));
+                map.push(new Slider(exactTime, x, y, ex, ey, cIdx, num++));
+                t += 600;
+            } else {
+                map.push(new Circle(exactTime, x, y, cIdx, num++));
+            }
         }
         return map.sort((a,b) => a.targetTime - b.targetTime);
     }
 
+    function loadCustomMapToObjects() {
+        activeObjects = [];
+        let cIdx = 0, num = 1;
+        // Map simple JSON array to class instances
+        customBeatmap.sort((a,b)=>a.time-b.time).forEach(n => {
+            activeObjects.push(new Circle(n.time, n.x, n.y, cIdx, num++));
+            if(num > 5) { num = 1; cIdx++; }
+        });
+    }
+
     function onYTStateChange(e) {
-        if (e.data === YT.PlayerState.PLAYING && gameState === 'loading') {
+        if (e.data === YT.PlayerState.PLAYING && (gameState === 'menu' || document.getElementById('loadingText').classList.contains('hidden') === false)) {
             ytDuration = ytPlayer.getDuration();
             document.getElementById('loadingText').classList.add('hidden');
             
-            activeCircles = generateMap(ytDuration, document.getElementById('diffSelect').value);
+            let mode = document.getElementById('modeSelect').value;
             
-            gameState = 'playing';
-            document.getElementById('mainMenu').classList.add('hidden');
-            document.getElementById('hud').classList.remove('hidden');
-            document.getElementById('ytContainer').classList.add('playing-dim');
-            
-            requestAnimationFrame(gameLoop);
+            if (document.getElementById('btnEditor').dataset.editing === "true") {
+                startEditor();
+            } else {
+                if (mode === 'auto') {
+                    activeObjects = generateAutoMap(ytDuration, document.getElementById('diffSelect').value);
+                } else {
+                    loadCustomMapToObjects(); // Load what's in memory
+                }
+                startGameplay();
+            }
         }
     }
 
+    function startGameplay() {
+        gameState = 'playing';
+        document.getElementById('mainMenu').classList.add('hidden');
+        document.getElementById('hud').classList.remove('hidden');
+        document.getElementById('ytContainer').classList.add('playing-dim');
+        requestAnimationFrame(gameLoop);
+    }
+
+    function startEditor() {
+        gameState = 'editing';
+        document.getElementById('mainMenu').classList.add('hidden');
+        document.getElementById('editorUI').classList.remove('hidden');
+        document.getElementById('ytContainer').classList.remove('playing-dim'); // Show video clearly
+        activeObjects = []; 
+        loadCustomMapToObjects(); // Show existing notes
+        updateEditorTimeline();
+        requestAnimationFrame(gameLoop);
+    }
+
+    function addNoteToBeatmap(x, y) {
+        if(!ytPlayer) return;
+        let t = ytPlayer.getCurrentTime() * 1000;
+        customBeatmap.push({ time: t, x: x, y: y });
+        loadCustomMapToObjects();
+        updateEditorTimeline();
+    }
+
+    function updateEditorTimeline() {
+        let container = document.getElementById('eNotesContainer');
+        container.innerHTML = '';
+        if(!ytDuration) return;
+        customBeatmap.forEach(n => {
+            let p = (n.time / (ytDuration * 1000)) * 100;
+            let el = document.createElement('div');
+            el.className = 'editor-note';
+            el.style.left = p + '%';
+            container.appendChild(el);
+        });
+    }
+
+    document.getElementById('eBtnPlayPause').addEventListener('click', () => {
+        if(ytPlayer.getPlayerState() === YT.PlayerState.PLAYING) ytPlayer.pauseVideo();
+        else ytPlayer.playVideo();
+    });
+    
+    document.getElementById('eBtnClear').addEventListener('click', () => { customBeatmap = []; loadCustomMapToObjects(); updateEditorTimeline(); });
+    
+    document.getElementById('eBtnExport').addEventListener('click', () => {
+        let area = document.getElementById('exportArea');
+        area.value = JSON.stringify(customBeatmap);
+        document.getElementById('exportContainer').classList.remove('hidden');
+    });
+
+    document.getElementById('eBtnImport').addEventListener('click', () => {
+        let area = document.getElementById('exportArea');
+        document.getElementById('exportContainer').classList.remove('hidden');
+        if(area.value) {
+            try { customBeatmap = JSON.parse(area.value); loadCustomMapToObjects(); updateEditorTimeline(); alert("Imported!"); } 
+            catch(e) { alert("Invalid JSON"); }
+        }
+    });
+
+    document.getElementById('eBtnExit').addEventListener('click', () => {
+        gameState = 'menu';
+        ytPlayer.pauseVideo();
+        document.getElementById('editorUI').classList.add('hidden');
+        document.getElementById('mainMenu').classList.remove('hidden');
+        ctx.fillStyle = '#050505'; ctx.fillRect(0,0,width,height);
+    });
+
+    document.getElementById('eTimeline').addEventListener('mousedown', (e) => {
+        if(!ytDuration) return;
+        let rect = e.target.getBoundingClientRect();
+        let p = (e.clientX - rect.left) / rect.width;
+        ytPlayer.seekTo(p * ytDuration, true);
+    });
+
     document.getElementById('btnPlay').addEventListener('click', () => {
         if (!ytPlayer || !ytPlayer.loadVideoById) return;
-        
         let url = document.getElementById('ytInput').value;
         currentVidId = extractVidId(url);
-        
-        gameState = 'loading';
+        document.getElementById('btnEditor').dataset.editing = "false";
         document.getElementById('loadingText').classList.remove('hidden');
         
-        // Reset stats
         stats = { score: 0, combo: 0, maxCombo: 0, health: 100, hits: {300:0, 100:0, 50:0, miss:0} };
-        activeCircles = []; hitTexts = []; particles = []; cursorTrail = []; shakeAmount = 0;
+        activeObjects = []; hitTexts = []; particles = []; cursorTrail = []; shakeAmount = 0;
         updateHUD();
         
         ytPlayer.loadVideoById(currentVidId);
         ytPlayer.setVolume(50);
+    });
+
+    document.getElementById('btnEditor').addEventListener('click', () => {
+        if (!ytPlayer || !ytPlayer.loadVideoById) return;
+        let url = document.getElementById('ytInput').value;
+        currentVidId = extractVidId(url);
+        document.getElementById('btnEditor').dataset.editing = "true";
+        document.getElementById('loadingText').classList.remove('hidden');
+        ytPlayer.loadVideoById(currentVidId);
     });
 
     function endGame(cleared) {
@@ -725,7 +997,7 @@
         
         document.getElementById('resTitle').innerText = cleared ? "Beatmap Cleared" : "Beatmap Failed";
         document.getElementById('resTitle').style.color = cleared ? "#ff66aa" : "#ff3333";
-        document.getElementById('resDiff').innerText = `Difficulty: ${document.getElementById('diffSelect').value.toUpperCase()}`;
+        document.getElementById('resDiff').innerText = `Mode: ${document.getElementById('modeSelect').value.toUpperCase()} | Diff: ${document.getElementById('diffSelect').value.toUpperCase()}`;
         
         let total = stats.hits[300] + stats.hits[100] + stats.hits[50] + stats.hits.miss;
         let acc = total === 0 ? 100 : ((stats.hits[300]*300 + stats.hits[100]*100 + stats.hits[50]*50) / (total*300) * 100);
@@ -744,7 +1016,7 @@
         document.getElementById('r50').innerText = stats.hits[50];
         document.getElementById('rMiss').innerText = stats.hits.miss;
 
-        if(cleared && window.fbReady && window.fbReady()) {
+        if(cleared && window.fbReady && window.fbReady() && stats.score > 0) {
             document.getElementById('lbSubmitSection').classList.remove('hidden');
             document.getElementById('submitStatus').classList.add('hidden');
             document.getElementById('btnSubmitScore').disabled = false;
@@ -760,7 +1032,6 @@
         ctx.fillStyle = '#050505'; ctx.fillRect(0,0,width,height);
     });
 
-    
     document.getElementById('btnSubmitScore').addEventListener('click', async () => {
         let name = document.getElementById('playerName').value.trim() || 'Guest';
         let btn = document.getElementById('btnSubmitScore');
@@ -774,7 +1045,8 @@
             await window.fbAddDoc(colRef, {
                 name: name, score: Math.floor(stats.score),
                 accuracy: parseFloat(acc.toFixed(2)), combo: stats.maxCombo,
-                videoId: currentVidId, difficulty: document.getElementById('diffSelect').value,
+                videoId: currentVidId, mode: document.getElementById('modeSelect').value,
+                difficulty: document.getElementById('diffSelect').value,
                 userId: window.fbUser().uid, timestamp: window.fbTimestamp()
             });
             document.getElementById('submitStatus').classList.remove('hidden');
@@ -790,23 +1062,18 @@
         let list = document.getElementById('lbList');
         
         if (!window.fbReady || !window.fbReady()) {
-            list.innerHTML = '<p class="text-center text-red-400 py-10">Database offline.</p>';
-            return;
+            list.innerHTML = '<p class="text-center text-red-400 py-10">Database offline.</p>'; return;
         }
-        
         list.innerHTML = '<p class="text-center text-pink-300 animate-pulse py-10">Fetching scores...</p>';
         
         try {
             const colRef = window.fbCollection(window.fbDb(), 'artifacts', window.appId, 'public', 'data', 'osu_leaderboard');
             const snap = await window.fbGetDocs(colRef);
-            let scores = [];
-            snap.forEach(doc => scores.push(doc.data()));
-            
+            let scores = []; snap.forEach(doc => scores.push(doc.data()));
             scores.sort((a,b) => b.score - a.score);
             
             if (scores.length === 0) {
-                list.innerHTML = '<p class="text-center text-gray-400 py-10">No scores yet. Be the first!</p>';
-                return;
+                list.innerHTML = '<p class="text-center text-gray-400 py-10">No scores yet. Be the first!</p>'; return;
             }
 
             let html = '';
@@ -829,10 +1096,7 @@
                 `;
             });
             list.innerHTML = html;
-            
-        } catch (e) {
-            list.innerHTML = '<p class="text-center text-red-500 py-10">Error loading scores.</p>';
-        }
+        } catch (e) { list.innerHTML = '<p class="text-center text-red-500 py-10">Error loading scores.</p>'; }
     });
 
     document.getElementById('btnCloseLB').addEventListener('click', () => {
@@ -840,7 +1104,7 @@
         document.getElementById('mainMenu').classList.remove('hidden');
     });
 
-    // Initial background paint
+    // Initial paint
     ctx.fillStyle = '#050505'; ctx.fillRect(0,0,width,height);
 </script>
 </body>
